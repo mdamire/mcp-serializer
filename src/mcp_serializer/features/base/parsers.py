@@ -7,6 +7,7 @@ from .schema import JsonSchemaTypes
 
 DEFAULT_TYPE_HINT = str
 
+
 class FunctionParser:
     """Parse function metadata including name, title, description, arguments, and return type."""
 
@@ -65,14 +66,16 @@ class FunctionParser:
                 else FunctionMetadata.empty,
             )
             self.function_metadata.arguments.append(arg_metadata)
-    
+
     def _get_type_hint(self, param_name):
         param_type = self._type_hints.get(param_name, DEFAULT_TYPE_HINT)
-        
+
         try:
             JsonSchemaTypes.from_python_type(param_type)
         except Exception as e:
-            raise ValueError(f"Unknown type for {param_name}: {param_type}. Use primitive types.") from e
+            raise ValueError(
+                f"Unknown type for {param_name}: {param_type}. Use primitive types."
+            ) from e
         return param_type
 
     def _parse_docstring_structure(self, docstring):

@@ -50,7 +50,7 @@ class FeatureContainer:
             return registrations[key]
         raise self.RegistryNotFound(key)
 
-    def _call_function(self, func, kwargs: dict=None):
+    def _call_function(self, func, kwargs: dict = None):
         try:
             return func(**kwargs) if kwargs else func()
         except Exception as e:
@@ -77,8 +77,6 @@ class FeatureContainer:
                         e,
                     )
             elif param_info.required:
-                raise self.RequiredParameterNotFound(
-                    func_metadata.name, param_name
-                )
+                raise self.RequiredParameterNotFound(func_metadata.name, param_name)
 
         return validated_params

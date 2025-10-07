@@ -155,13 +155,13 @@ class TestFunctionParser:
 
         param1_arg = metadata.arguments[0]
         assert param1_arg.name == "param1"
-        assert param1_arg.type_hint is str # Default type hint is str
+        assert param1_arg.type_hint is str  # Default type hint is str
         assert param1_arg.description == "First parameter"
         assert param1_arg.required == True
 
         param2_arg = metadata.arguments[1]
         assert param2_arg.name == "param2"
-        assert param2_arg.type_hint is str # Default type hint is str
+        assert param2_arg.type_hint is str  # Default type hint is str
         assert param2_arg.required == False
         assert param2_arg.default == "default"
 

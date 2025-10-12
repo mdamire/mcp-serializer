@@ -4,8 +4,6 @@ from .schema import (
     ResourceListResultSchema,
     ResourceTemplateListResultSchema,
     ResourceDefinitionSchema,
-    TextContentSchema,
-    BinaryContentSchema,
 )
 from .contents import ResourceContent
 from .schema import ContentSchema
@@ -14,8 +12,7 @@ from ..base.pagination import Pagination
 
 
 class ResourceSchemaAssembler(FeatureSchemaAssembler):
-    def __init__(self, page_size):
-        super().__init__(page_size)
+    def __init__(self):
         self.resource_list = []
         self.resource_template_list = []
 
@@ -80,9 +77,12 @@ class ResourceSchemaAssembler(FeatureSchemaAssembler):
 
         return resource_schema_list
 
-    def build_list_result_schema(self, cursor: Optional[str] = None):
+    def build_list_result_schema(
+        self, page_size: int = 10, cursor: Optional[str] = None
+    ):
         resource_schema_list = self._build_definition_schema(self.resource_list)
-        paginated_resource_schema_list, next_cursor = self.pagination.paginate(
+        pagination = Pagination(page_size)
+        paginated_resource_schema_list, next_cursor = pagination.paginate(
             resource_schema_list, cursor
         )
         schema = ResourceListResultSchema(
@@ -91,11 +91,14 @@ class ResourceSchemaAssembler(FeatureSchemaAssembler):
         schema = self._build_non_none_dict(schema)
         return schema
 
-    def build_template_list_result_schema(self, cursor: Optional[str] = None):
+    def build_template_list_result_schema(
+        self, page_size: int = 10, cursor: Optional[str] = None
+    ):
         resource_template_schema_list = self._build_definition_schema(
             self.resource_template_list
         )
-        paginated_template_schema_list, next_cursor = self.pagination.paginate(
+        pagination = Pagination(page_size)
+        paginated_template_schema_list, next_cursor = pagination.paginate(
             resource_template_schema_list, cursor
         )
         schema = ResourceTemplateListResultSchema(

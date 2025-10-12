@@ -9,7 +9,7 @@ from mcp_serializer.features.resource.schema import AnnotationSchema
 
 class TestResourceSchemaAssembler:
     def setup_method(self):
-        self.assembler = ResourceSchemaAssembler(10)
+        self.assembler = ResourceSchemaAssembler()
 
     def test_init(self):
         assert self.assembler.resource_list == []
@@ -51,7 +51,7 @@ class TestResourceSchemaAssembler:
         registry.extra = {"name": "test", "description": "Test resource"}
         self.assembler.add_resource_registry(registry)
 
-        result = self.assembler.build_list_result_schema()
+        result = self.assembler.build_list_result_schema(page_size=10)
 
         assert "resources" in result
         assert len(result["resources"]) == 1
@@ -68,7 +68,7 @@ class TestResourceSchemaAssembler:
         registry.extra = {"name": "test-template"}
         self.assembler.add_resource_registry(registry)
 
-        result = self.assembler.build_template_list_result_schema()
+        result = self.assembler.build_template_list_result_schema(page_size=10)
 
         assert "resourceTemplates" in result
         assert len(result["resourceTemplates"]) == 1
@@ -137,7 +137,7 @@ class TestResourceSchemaAssembler:
             registry.extra = {"name": f"test{i}"}
             self.assembler.add_resource_registry(registry)
 
-        result = self.assembler.build_list_result_schema()
+        result = self.assembler.build_list_result_schema(page_size=10)
 
         assert "resources" in result
         assert len(result["resources"]) == 10  # Page size limit
@@ -161,7 +161,9 @@ class TestResourceSchemaAssembler:
         next_cursor = first_page["nextCursor"]
 
         # Get second page with cursor
-        second_page = self.assembler.build_list_result_schema(cursor=next_cursor)
+        second_page = self.assembler.build_list_result_schema(
+            page_size=10, cursor=next_cursor
+        )
 
         assert "resources" in second_page
         assert len(second_page["resources"]) == 5  # Remaining items
@@ -179,7 +181,7 @@ class TestResourceSchemaAssembler:
             )
             self.assembler.add_resource_registry(registry)
 
-        result = self.assembler.build_list_result_schema()
+        result = self.assembler.build_list_result_schema(page_size=10)
 
         assert "resources" in result
         assert len(result["resources"]) == 5
@@ -198,7 +200,7 @@ class TestResourceSchemaAssembler:
             registry.extra = {"name": f"template{i}"}
             self.assembler.add_resource_registry(registry)
 
-        result = self.assembler.build_template_list_result_schema()
+        result = self.assembler.build_template_list_result_schema(page_size=10)
 
         assert "resourceTemplates" in result
         assert len(result["resourceTemplates"]) == 10  # Page size limit
@@ -218,12 +220,12 @@ class TestResourceSchemaAssembler:
             self.assembler.add_resource_registry(registry)
 
         # Get first page
-        first_page = self.assembler.build_template_list_result_schema()
+        first_page = self.assembler.build_template_list_result_schema(page_size=10)
         next_cursor = first_page["nextCursor"]
 
         # Get second page with cursor
         second_page = self.assembler.build_template_list_result_schema(
-            cursor=next_cursor
+            page_size=10, cursor=next_cursor
         )
 
         assert "resourceTemplates" in second_page

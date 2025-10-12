@@ -52,7 +52,7 @@ class TestFunctionRegistry:
 
 class TestResourceContainer:
     def setup_method(self):
-        self.container = ResourceContainer(page_size=10)
+        self.container = ResourceContainer()
 
     def test_init(self):
         assert self.container.registrations == {}
@@ -214,7 +214,7 @@ class TestResourceContainer:
         content.add_text_content("Test", "text/plain")
 
         self.container.add_resource("file://test.txt", content, name="test")
-        result = self.container.build_list_result_schema()
+        result = self.container.schema_assembler.build_list_result_schema()
 
         assert "resources" in result
         assert len(result["resources"]) == 1
@@ -226,7 +226,7 @@ class TestResourceContainer:
             return content
 
         self.container.register(sample_func, "file://test")
-        result = self.container.build_template_list_result_schema()
+        result = self.container.schema_assembler.build_template_list_result_schema()
 
         assert "resourceTemplates" in result
         assert len(result["resourceTemplates"]) == 1
@@ -244,7 +244,7 @@ class TestResourceContainer:
         )  # Not callable
 
         # Should appear in list schema
-        result = self.container.build_list_result_schema()
+        result = self.container.schema_assembler.build_list_result_schema()
         assert "resources" in result
         assert len(result["resources"]) == 1
         assert result["resources"][0]["uri"] == "https://example.com/api/data"

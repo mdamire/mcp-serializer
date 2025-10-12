@@ -20,8 +20,8 @@ class FunctionRegistry:
 
 
 class ResourceContainer(FeatureContainer):
-    def __init__(self, page_size):
-        self.schema_assembler = ResourceSchemaAssembler(page_size)
+    def __init__(self):
+        self.schema_assembler = ResourceSchemaAssembler()
         self.registrations = {}
 
     def add_resource(self, uri, content: ResourceContent = None, **extra):
@@ -87,12 +87,6 @@ class ResourceContainer(FeatureContainer):
         params = self._extract_path_params(uri, registry)
 
         return registry, params
-
-    def build_list_result_schema(self, cursor: str = None):
-        return self.schema_assembler.build_list_result_schema(cursor)
-
-    def build_template_list_result_schema(self, cursor: str = None):
-        return self.schema_assembler.build_template_list_result_schema(cursor)
 
     def call(self, uri):
         registry, parsed_params = self._get_registry(uri)

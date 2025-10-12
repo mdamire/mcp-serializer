@@ -1,0 +1,202 @@
+import pytest
+from unittest.mock import Mock, patch
+from pydantic import BaseModel
+from mcp_serializer.features.prompt.contents import PromptsContent
+from mcp_serializer.features.prompt.schema import (
+    TextContent,
+    ImageContent,
+    AudioContent,
+    EmbeddedResource,
+)
+from mcp_serializer.features.resource.container import ResourceContainer
+from mcp_serializer.features.resource.contents import ResourceContent
+
+
+class TestPromptsContent:
+    def setup_method(self):
+        self.prompts_content = PromptsContent()
+
+    def test_init_and_roles_enum(self):
+        # Test default initialization
+        assert self.prompts_content.messages == []
+        assert self.prompts_content.default_role == PromptsContent.Roles.ASSISTANT
+        assert self.prompts_content.resource_container is None
+
+        # Test Roles enum
+        assert PromptsContent.Roles.USER.value == "user"
+        assert PromptsContent.Roles.ASSISTANT.value == "assistant"
+        assert PromptsContent.Roles.has_value("user") is True
+        assert PromptsContent.Roles.has_value("invalid") is False
+
+        # Test with custom role
+        custom_prompts = PromptsContent(role=PromptsContent.Roles.USER)
+        assert custom_prompts.default_role == PromptsContent.Roles.USER
+
+    def test_add_text_with_roles(self):
+        # Test with explicit role
+        result1 = self.prompts_content.add_text("Hello", role=PromptsContent.Roles.USER)
+        assert isinstance(result1, TextContent)
+        assert result1.text == "Hello"
+        assert len(self.prompts_content.messages) == 1
+        assert self.prompts_content.messages[0]["role"] == "user"
+
+        # Test with default role
+        result2 = self.prompts_content.add_text("Hi there!")
+        assert len(self.prompts_content.messages) == 2
+        assert self.prompts_content.messages[1]["role"] == "assistant"
+
+    def test_add_text_validation(self):
+        with pytest.raises(ValueError, match="Text must be a non-empty string"):
+            self.prompts_content.add_text("")
+
+        with pytest.raises(ValueError, match="Text must be a non-empty string"):
+            self.prompts_content.add_text(123)
+
+    def test_add_image_and_audio(self):
+        valid_base64 = (
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGA"
+        )
+
+        # Test image
+        image_result = self.prompts_content.add_image(
+            valid_base64, "image/png", role=PromptsContent.Roles.USER
+        )
+        assert isinstance(image_result, ImageContent)
+        assert image_result.data == valid_base64
+        assert image_result.mimeType == "image/png"
+        assert self.prompts_content.messages[0]["role"] == "user"
+
+        # Test audio
+        audio_base64 = "UklGRjIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ4AAAA="
+        audio_result = self.prompts_content.add_audio(
+            audio_base64, "audio/wav", role=PromptsContent.Roles.ASSISTANT
+        )
+        assert isinstance(audio_result, AudioContent)
+        assert audio_result.data == audio_base64
+        assert self.prompts_content.messages[1]["role"] == "assistant"
+
+    def test_add_media_validation(self):
+        # Test image validation
+        with pytest.raises(ValueError, match="Data must be a non-empty string"):
+            self.prompts_content.add_image("", "image/png")
+
+        with pytest.raises(ValueError, match="MIME type is required for image content"):
+            self.prompts_content.add_image("valid_data", "")
+
+        # Test audio validation
+        with pytest.raises(ValueError, match="Data must be a non-empty string"):
+            self.prompts_content.add_audio("", "audio/wav")
+
+        with pytest.raises(ValueError, match="MIME type is required for audio content"):
+            self.prompts_content.add_audio("valid_data", "")
+
+    @patch("mcp_serializer.features.prompt.contents.TextContentSanitizer")
+    def test_add_file_text_success(self, mock_sanitizer):
+        mock_instance = Mock()
+        mock_instance.text = "File content"
+        mock_instance.mime_type = "text/plain"
+        mock_sanitizer.return_value = mock_instance
+
+        result = self.prompts_content.add_file(
+            "/path/to/file.txt", role=PromptsContent.Roles.USER
+        )
+
+        assert isinstance(result, TextContent)
+        assert result.text == "File content"
+        assert self.prompts_content.messages[0]["role"] == "user"
+
+    @patch("mcp_serializer.features.prompt.contents.TextContentSanitizer")
+    @patch("mcp_serializer.features.prompt.contents.ImageContentSanitizer")
+    @patch("mcp_serializer.features.prompt.contents.AudioContentSanitizer")
+    def test_add_file_all_fail(self, mock_audio, mock_image, mock_text):
+        mock_text.side_effect = Exception("Text error")
+        mock_image.side_effect = Exception("Image error")
+        mock_audio.side_effect = Exception("Audio error")
+
+        with pytest.raises(ValueError, match="Unable to process file"):
+            self.prompts_content.add_file("/path/to/unknown.file")
+
+    def test_add_embedded_resource_with_data(self):
+        result = self.prompts_content.add_embedded_resource(
+            "https://example.com",
+            text="Embedded content",
+            mime_type="text/plain",
+            role=PromptsContent.Roles.USER,
+        )
+
+        assert isinstance(result, EmbeddedResource)
+        assert result.resource.text == "Embedded content"
+        assert result.resource.mimeType == "text/plain"
+        assert self.prompts_content.messages[0]["role"] == "user"
+
+    def test_add_embedded_resource_with_container(self):
+        # Create ResourceContainer with content
+        resource_container = ResourceContainer()
+        resource_content = ResourceContent()
+        resource_content.add_text_content("Resource text", "text/plain")
+
+        resource_container.add_resource(
+            "file://test.txt", resource_content, name="Test"
+        )
+
+        # Create PromptsContent with resource container
+        prompts_content = PromptsContent(resource_container=resource_container)
+        result = prompts_content.add_embedded_resource("file://test.txt")
+
+        assert isinstance(result, EmbeddedResource)
+        assert result.resource.text == "Resource text"
+        assert result.resource.name == "Test"
+
+    def test_add_embedded_resource_errors(self):
+        # Test without container and without data
+        with pytest.raises(PromptsContent.ResourceContainerRequiredError):
+            self.prompts_content.add_embedded_resource("file://test.txt")
+
+        # Test without mime type
+        with pytest.raises(ValueError, match="Could not determine mime type"):
+            self.prompts_content.add_embedded_resource(
+                "https://example.com", text="Content without mime type"
+            )
+
+    def test_message_role_validation(self):
+        # Test invalid role in _add_message (indirectly through add_text)
+        with pytest.raises(
+            ValueError, match="Role must be either Roles.USER or Roles.ASSISTANT"
+        ):
+            # This would happen if we could pass invalid role, but our API prevents it
+            # Testing the validation exists in the _add_message method
+            self.prompts_content._add_message("invalid_role", "content")
+
+    def test_complex_conversation_flow(self):
+        """Test a realistic conversation with multiple content types and roles."""
+        prompts_content = PromptsContent()
+
+        # User starts conversation
+        prompts_content.add_text("Hello, I need help", role=PromptsContent.Roles.USER)
+
+        # Assistant responds
+        prompts_content.add_text(
+            "I'm happy to help! What do you need?", role=PromptsContent.Roles.ASSISTANT
+        )
+
+        # User sends image
+        valid_base64 = (
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGA"
+        )
+        prompts_content.add_image(
+            valid_base64, "image/png", role=PromptsContent.Roles.USER
+        )
+
+        # Assistant responds with embedded resource
+        prompts_content.add_embedded_resource(
+            "https://example.com/help",
+            text="Here's a helpful guide",
+            mime_type="text/markdown",
+            role=PromptsContent.Roles.ASSISTANT,
+        )
+
+        assert len(prompts_content.messages) == 4
+        assert prompts_content.messages[0]["role"] == "user"
+        assert prompts_content.messages[1]["role"] == "assistant"
+        assert prompts_content.messages[2]["role"] == "user"
+        assert prompts_content.messages[3]["role"] == "assistant"

@@ -116,8 +116,12 @@ class ResourceSchemaAssembler(FeatureSchemaAssembler):
             updated_content = content.model_copy(
                 update={
                     "uri": content.uri or resource_registry.uri,
-                    "name": content.name or resource_registry.extra.get("name"),
-                    "title": content.title or resource_registry.extra.get("title"),
+                    "name": content.name
+                    or resource_registry.extra.get("name")
+                    or resource_registry.metadata.name,
+                    "title": content.title
+                    or resource_registry.extra.get("title")
+                    or resource_registry.metadata.title,
                     "annotations": content.annotations
                     or resource_registry.extra.get("annotations"),
                 }

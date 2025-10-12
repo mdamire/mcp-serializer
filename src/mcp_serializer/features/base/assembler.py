@@ -8,10 +8,6 @@ class FeatureSchemaAssembler:
             self.result_type = result_type
             super().__init__(f"Unsupported result type: {result_type}")
 
-    def __init__(self, page_size: int = 10):
-        self.page_size = page_size
-        self.pagination = Pagination(page_size)
-
     def _remove_none_from_dict(self, dict_value: dict):
         if not dict_value:
             return None

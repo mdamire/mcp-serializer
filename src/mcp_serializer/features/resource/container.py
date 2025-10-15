@@ -25,6 +25,15 @@ class ResourceContainer(FeatureContainer):
         self.registrations = {}
 
     def add_resource(self, uri, content: ResourceContent = None, **extra):
+        # get mime type from extra or content
+        mime_type = extra.get("mime_type")
+        if not mime_type:
+            for single_content in content.content_list:
+                mime_type = single_content.get("mimeType")
+                if mime_type:
+                    extra["mime_type"] = mime_type
+                    break
+
         # For HTTP URIs, content is optional - they appear in list but not callable
         if uri.startswith(("http://", "https://")) and content is None:
             registry = ContentRegistry(None, uri, extra)

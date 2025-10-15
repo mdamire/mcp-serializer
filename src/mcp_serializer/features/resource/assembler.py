@@ -50,7 +50,7 @@ class ResourceSchemaAssembler(FeatureSchemaAssembler):
                     "title": resource_registry.extra.get("title") or metadata.title,
                     "description": resource_registry.extra.get("description")
                     or metadata.description,
-                    "mimeType": resource_registry.extra.get("mimeType"),
+                    "mimeType": resource_registry.extra.get("mime_type"),
                     "size": resource_registry.extra.get("size"),
                     "annotations": self._remove_none_from_dict(
                         resource_registry.extra.get("annotations")
@@ -62,7 +62,7 @@ class ResourceSchemaAssembler(FeatureSchemaAssembler):
                     "name": resource_registry.extra.get("name"),
                     "title": resource_registry.extra.get("title"),
                     "description": resource_registry.extra.get("description"),
-                    "mimeType": resource_registry.extra.get("mimeType"),
+                    "mimeType": resource_registry.extra.get("mime_type"),
                     "size": resource_registry.extra.get("size"),
                     "annotations": self._remove_none_from_dict(
                         resource_registry.extra.get("annotations")

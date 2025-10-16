@@ -53,7 +53,7 @@ class MCPRegistry:
     def add_resource(
         self,
         uri,
-        content: ResourceContent,
+        content: ResourceContent=None,
         name=None,
         title=None,
         description=None,

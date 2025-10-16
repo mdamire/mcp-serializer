@@ -19,7 +19,8 @@ class ToolsContainer(FeatureContainer):
         function_metadata = self._get_function_metadata(func)
         registry = ToolRegistry(function_metadata, extra)
         self.schema_assembler.add_tool_registry(registry)
-        self.registrations[func.__name__] = registry
+        name = extra.get("name") or function_metadata.name
+        self.registrations[name] = registry
         return function_metadata
 
     def call(self, func_name, **kwargs):

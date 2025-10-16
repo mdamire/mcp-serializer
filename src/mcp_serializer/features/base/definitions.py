@@ -38,8 +38,16 @@ class FunctionMetadata:
             self.arguments = []
 
     @property
+    def has_arguments(self):
+        return len(self.arguments) > 0
+    
+    @property
     def has_required_arguments(self):
         return any(arg.required for arg in self.arguments)
+    
+    @property
+    def has_optional_arguments(self):
+        return any(not arg.required for arg in self.arguments)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert all parsed information to a dictionary."""

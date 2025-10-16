@@ -16,10 +16,10 @@ from . import errors
 class JsonRpcSerializer:
     """Serializer for JSON-RPC 2.0 requests."""
 
-    def __init__(self, initializer: Initializer, registry: MCPRegistry):
+    def __init__(self, initializer: Initializer, registry: MCPRegistry, page_size: int = 10):
         self.initializer = initializer
         self.registry = registry
-        self.request_manager = RPCRequestManager(initializer, registry)
+        self.request_manager = RPCRequestManager(initializer, registry, page_size)
 
     def validate(self, request_data: Union[str, dict, list]) -> Union[dict, list]:
         if isinstance(request_data, str):

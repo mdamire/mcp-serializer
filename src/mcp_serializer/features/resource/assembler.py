@@ -21,7 +21,7 @@ class ResourceSchemaAssembler(FeatureSchemaAssembler):
 
         if (
             isinstance(resource_registry, FunctionRegistry)
-            and resource_registry.metadata.has_required_arguments
+            and resource_registry.metadata.has_arguments
         ):
             self._append_sorted_list(
                 self.resource_template_list, resource_registry, "uri"

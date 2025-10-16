@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from .registry import MCPRegistry
 from .schema import (
     JsonRpcRequest,
-    JsonRpcError,
     JsonRpcErrorResponse,
     JsonRpcSuccessResponse,
 )
@@ -39,9 +38,10 @@ class RPCRequestManager:
         resources = "resources"
         prompts = "prompts"
 
-    def __init__(self, initializer: Initializer, registry: MCPRegistry):
+    def __init__(self, initializer: Initializer, registry: MCPRegistry, page_size):
         self.registry = registry
         self.initializer = initializer
+        self.page_size = page_size
 
     def _process_initialize_request(self, rpc_params, **kwargs):
         result = self.initializer.build_result(rpc_params)
@@ -68,7 +68,7 @@ class RPCRequestManager:
         if method_type == "list":
             return (
                 self.registry.tools_container.schema_assembler.build_list_result_schema(
-                    cursor
+                    page_size=self.page_size, cursor=cursor
                 )
             )
         elif method_type == "call":
@@ -104,11 +104,11 @@ class RPCRequestManager:
             raise self.FeatureNotInitialized("resources")
         if method_type == "list":
             return self.registry.resource_container.schema_assembler.build_list_result_schema(
-                cursor
+                page_size=self.page_size, cursor=cursor
             )
         elif method_type == "templates/list":
             return self.registry.resource_container.schema_assembler.build_template_list_result_schema(
-                cursor
+                page_size=self.page_size, cursor=cursor
             )
         elif method_type == "read":
             uri = rpc_params["uri"]
@@ -138,7 +138,7 @@ class RPCRequestManager:
             raise self.FeatureNotInitialized("prompts")
         if method_type == "list":
             return self.registry.prompt_container.schema_assembler.build_list_result_schema(
-                cursor
+                page_size=self.page_size, cursor=cursor
             )
         elif method_type == "get":
             name = rpc_params["name"]

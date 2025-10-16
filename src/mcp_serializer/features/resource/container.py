@@ -25,20 +25,21 @@ class ResourceContainer(FeatureContainer):
         self.registrations = {}
 
     def add_resource(self, uri, content: ResourceContent = None, **extra):
-        # get mime type from extra or content
-        mime_type = extra.get("mime_type")
-        if not mime_type:
-            for single_content in content.content_list:
-                mime_type = single_content.get("mimeType")
-                if mime_type:
-                    extra["mime_type"] = mime_type
-                    break
 
         # For HTTP URIs, content is optional - they appear in list but not callable
         if uri.startswith(("http://", "https://")) and content is None:
             registry = ContentRegistry(None, uri, extra)
             self.schema_assembler.add_resource_registry(registry)
             return registry
+
+        # get mime type from extra or content
+        mime_type = extra.get("mime_type")
+        if not mime_type:
+            for single_content in content.content_list:
+                mime_type = single_content.mimeType
+                if mime_type:
+                    extra["mime_type"] = mime_type
+                    break
 
         # For non-HTTP URIs or when content is provided, content is required
         if not isinstance(content, ResourceContent):
@@ -49,8 +50,17 @@ class ResourceContainer(FeatureContainer):
         self.registrations[uri] = registry
         return registry
 
-    def register(self, func, uri, **extra):
+    def register(self, func, uri: str, **extra):
         function_metadata = FunctionParser(func).function_metadata
+
+        # strip trailing slash for resource templates
+        if function_metadata.has_arguments:
+            uri = uri.rstrip("/")
+
+        # raise error if optional arguments are used with function
+        if function_metadata.has_optional_arguments:
+            raise ValueError("Optional arguments are not supported for resource registration with function.")
+        
         registry = FunctionRegistry(function_metadata, uri, extra)
         self.schema_assembler.add_resource_registry(registry)
         self.registrations[uri] = registry

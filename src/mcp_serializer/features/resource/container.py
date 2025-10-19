@@ -4,6 +4,7 @@ from ..base.container import FeatureContainer
 from ..base.parsers import FunctionParser
 from ..base.definitions import FunctionMetadata
 from ..base.contents import MimeTypes
+from typing import Union, BinaryIO
 from urllib.parse import urlparse
 
 
@@ -47,14 +48,31 @@ class ResourceContainer(FeatureContainer):
         self.schema_assembler.add_resource_registry(registry)
         return registry
 
-    def add_resource(self, uri: str, result: ResourceResult = None, **extra):
+    def _get_file_result(self, file: str):
+        result = ResourceResult()
+        result.add_file(file)
+        return result
+
+    def add_resource(
+        self,
+        uri: str,
+        result: ResourceResult = None,
+        file: Union[str, BinaryIO] = None,
+        **extra,
+    ):
         # For HTTP URIs, content is optional - they appear in list but not callable
         if uri.startswith(("http://", "https://")) and result is None:
             return self._add_http_resource(uri, extra)
 
-        # For non-HTTP URIs or when content is provided, content is required
+        if not file and not result:
+            raise ValueError("Either file or result must be provided for non-HTTP URIs")
+
+        if file:
+            result = self._get_file_result(file)
+
+        # For non-HTTP URIs or when result is provided, result is required
         if not isinstance(result, ResourceResult):
-            raise ValueError("Content must be a ResourceResult object")
+            raise ValueError("result must be a ResourceResult object")
 
         registry = ResultRegistry(result, uri, extra)
         self.schema_assembler.add_resource_registry(registry)

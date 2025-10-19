@@ -1,10 +1,7 @@
 from typing import Optional, Dict, Any, Union
 from pydantic import BaseModel
-from ..base.contents import (
-    TextContentSanitizer,
-    ImageContentSanitizer,
-    AudioContentSanitizer,
-)
+from ..base.parsers import FileParser
+from ..base.definitions import ContentTypes
 from .schema import (
     TextContent,
     ImageContent,
@@ -77,39 +74,51 @@ class ToolsResult:
     def add_file(
         self, file: str, annotations: Optional[Dict[str, Any]] = None
     ) -> Union[TextContent, ImageContent, AudioContent]:
-        """Add content from file - automatically detects if it's text, image, or audio."""
-        # Try text content first
-        try:
-            text_sanitizer = TextContentSanitizer(file=file)
-            if text_sanitizer.text and text_sanitizer.mime_type:
-                return self.add_text_content(text_sanitizer.text, annotations)
-        except Exception as e:
-            pass
+        """Add content from file - automatically detects if it's text, image, or audio.
 
-        # Try image content
+        Args:
+            file: File path or file object
+            annotations: Optional annotations
+
+        Returns:
+            TextContent, ImageContent, or AudioContent
+
+        Raises:
+            ValueError: If file type cannot be determined
+        """
         try:
-            image_sanitizer = ImageContentSanitizer(file=file)
-            if image_sanitizer.data and image_sanitizer.mime_type:
+            file_metadata = FileParser(file).file_metadata
+
+            content_kwargs = {
+                "annotations": annotations,
+            }
+
+            if file_metadata.content_type == ContentTypes.TEXT:
+                return self.add_text_content(
+                    text=file_metadata.data,
+                    **content_kwargs,
+                )
+            elif file_metadata.content_type == ContentTypes.IMAGE:
                 return self.add_image_content(
-                    image_sanitizer.data, image_sanitizer.mime_type, annotations
+                    data=file_metadata.data,
+                    mime_type=file_metadata.mime_type,
+                    **content_kwargs,
                 )
-        except Exception as e:
-            pass
-
-        # Try audio content
-        try:
-            audio_sanitizer = AudioContentSanitizer(file=file)
-            if audio_sanitizer.data and audio_sanitizer.mime_type:
+            elif file_metadata.content_type == ContentTypes.AUDIO:
                 return self.add_audio_content(
-                    audio_sanitizer.data, audio_sanitizer.mime_type, annotations
+                    data=file_metadata.data,
+                    mime_type=file_metadata.mime_type,
+                    **content_kwargs,
                 )
-        except Exception as e:
-            pass
-
-        raise ValueError(
-            f"Unable to determine data or mime type from file '{file}'. "
-            "You can use add_text, add_image, or add_audio methods to add content manually."
-        )
+            else:
+                raise ValueError(
+                    f"Unknown content type: {file_metadata.content_type}"
+                )
+        except ValueError as e:
+            raise ValueError(
+                f"Unable to determine data or mime type from file '{file}'. "
+                "You can use add_text_content, add_image_content, or add_audio_content methods to add content manually."
+            ) from e
 
     def _get_resource_info(self, uri: str) -> dict:
         if not self.resource_container:

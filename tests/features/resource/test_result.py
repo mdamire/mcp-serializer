@@ -69,8 +69,8 @@ class TestResourceContainer:
         assert "file://test.txt" in self.container.registrations
 
     def test_add_resource_invalid_content(self):
-        with pytest.raises(ValueError, match="Content must be a ResourceResult object"):
-            self.container.add_resource("file://test.txt", "invalid_content")
+        with pytest.raises(ValueError, match="result must be a ResourceResult object"):
+            self.container.add_resource(result="invalid_content", uri="file://test.txt")
 
     def test_register_function(self):
         def sample_func():

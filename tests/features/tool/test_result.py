@@ -102,46 +102,61 @@ class TestToolsResult:
         ):
             self.tools_content.add_audio_content("invalid_base64!", "audio/wav")
 
-    @patch("mcp_serializer.features.tool.result.TextContentSanitizer")
-    def test_add_file_text_success(self, mock_sanitizer):
-        mock_instance = Mock()
-        mock_instance.text = "File content"
-        mock_instance.mime_type = "text/plain"
-        mock_sanitizer.return_value = mock_instance
+    @patch("mcp_serializer.features.tool.result.FileParser")
+    def test_add_file_text_success(self, mock_file_parser):
+        from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
+
+        # Create mock FileMetadata
+        mock_metadata = FileMetadata(
+            file_name="file.txt",
+            size=100,
+            mime_type="text/plain",
+            data="File content",
+            content_type=ContentTypes.TEXT,
+        )
+
+        # Mock FileParser to return the metadata
+        mock_parser_instance = Mock()
+        mock_parser_instance.file_metadata = mock_metadata
+        mock_file_parser.return_value = mock_parser_instance
 
         result = self.tools_content.add_file("/path/to/file.txt")
 
         assert isinstance(result, TextContent)
         assert result.text == "File content"
 
-    @patch("mcp_serializer.features.tool.result.TextContentSanitizer")
-    @patch("mcp_serializer.features.tool.result.ImageContentSanitizer")
-    def test_add_file_image_success(self, mock_image_sanitizer, mock_text_sanitizer):
-        # Text sanitizer fails
-        mock_text_sanitizer.side_effect = Exception("Not text")
+    @patch("mcp_serializer.features.tool.result.FileParser")
+    def test_add_file_image_success(self, mock_file_parser):
+        from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
 
-        # Image sanitizer succeeds
+        # Valid base64 image data
         valid_base64 = (
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGA"
         )
-        mock_image_instance = Mock()
-        mock_image_instance.data = valid_base64
-        mock_image_instance.mime_type = "image/png"
-        mock_image_sanitizer.return_value = mock_image_instance
+
+        # Create mock FileMetadata for image
+        mock_metadata = FileMetadata(
+            file_name="image.png",
+            size=200,
+            mime_type="image/png",
+            data=valid_base64,
+            content_type=ContentTypes.IMAGE,
+        )
+
+        # Mock FileParser to return the metadata
+        mock_parser_instance = Mock()
+        mock_parser_instance.file_metadata = mock_metadata
+        mock_file_parser.return_value = mock_parser_instance
 
         result = self.tools_content.add_file("/path/to/image.png")
 
         assert isinstance(result, ImageContent)
         assert result.data == valid_base64
 
-    @patch("mcp_serializer.features.tool.result.TextContentSanitizer")
-    @patch("mcp_serializer.features.tool.result.ImageContentSanitizer")
-    @patch("mcp_serializer.features.tool.result.AudioContentSanitizer")
-    def test_add_file_all_fail(self, mock_audio, mock_image, mock_text):
-        # All sanitizers fail
-        mock_text.side_effect = Exception("Text error")
-        mock_image.side_effect = Exception("Image error")
-        mock_audio.side_effect = Exception("Audio error")
+    @patch("mcp_serializer.features.tool.result.FileParser")
+    def test_add_file_all_fail(self, mock_file_parser):
+        # Mock FileParser to raise ValueError
+        mock_file_parser.side_effect = ValueError("Cannot determine file type from MimeTypes")
 
         with pytest.raises(ValueError, match="Unable to determine data or mime type"):
             self.tools_content.add_file("/path/to/unknown.file")

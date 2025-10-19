@@ -1,7 +1,9 @@
-from typing import get_type_hints
+from typing import get_type_hints, Union, BinaryIO
 import inspect
 import re
-from .definitions import FunctionMetadata, ArgumentMetadata
+import os
+import base64
+from .definitions import FunctionMetadata, ArgumentMetadata, FileMetadata, ContentTypes
 from .schema import JsonSchemaTypes
 
 
@@ -198,3 +200,163 @@ class FunctionParser:
             )
 
         return param_descriptions
+
+
+class FileParser:
+    """Parse file metadata including name, size, mime type, and content."""
+
+    def __init__(self, file: Union[str, BinaryIO]):
+        """Initialize with a file to parse.
+
+        Args:
+            file: The file path (str) or file object (BinaryIO) to parse
+        """
+        self.file = file
+        self.file_metadata = self._parse_file()
+
+    def _parse_file(self) -> FileMetadata:
+        """Parse the file and extract metadata.
+
+        Returns:
+            FileMetadata with content_type set to 'text', 'image', or 'audio'
+        """
+        # Read file content
+        file_name, size, file_content = self._read_file(self.file)
+
+        # Try as text content
+        metadata = self._try_as_text_content(file_name, size, file_content)
+        if metadata:
+            return metadata
+
+        # Try as image content
+        metadata = self._try_as_image_content(file_name, size, file_content)
+        if metadata:
+            return metadata
+
+        # Try as audio content
+        metadata = self._try_as_audio_content(file_name, size, file_content)
+        if metadata:
+            return metadata
+
+        raise ValueError(
+            f"Cannot determine file type from MimeTypes for file: {file_name}"
+        )
+
+    def _read_file(self, file: Union[str, BinaryIO]) -> tuple[str, int, bytes]:
+        """Read file and extract file name, size, and content.
+
+                Args:
+                    file: The file path (str) or file object (BinaryIO)
+        s
+                Returns:
+                    Tuple of (file_name, size, file_content)
+        """
+        if isinstance(file, str):
+            file_name = os.path.basename(file)
+            size = os.path.getsize(file)
+            with open(file, "rb") as f:
+                file_content = f.read()
+        else:
+            file_name = getattr(file, "name", "unknown")
+            if hasattr(file_name, "__fspath__"):  # Handle Path objects
+                file_name = os.path.basename(file_name.__fspath__())
+            elif isinstance(file_name, str):
+                file_name = os.path.basename(file_name)
+
+            # Get size and content
+            current_pos = file.tell()
+            file.seek(0)
+            file_content = file.read()
+            size = len(file_content)
+            file.seek(current_pos)  # Restore position
+
+            # Convert to bytes if needed
+            if isinstance(file_content, str):
+                file_content = file_content.encode("utf-8")
+
+        return file_name, size, file_content
+
+    def _try_as_text_content(
+        self, file_name: str, size: int, file_content: bytes
+    ) -> Union[FileMetadata, None]:
+        """Try to process file as text content.
+
+        Args:
+            file_name: Name of the file
+            size: Size of the file in bytes
+            file_content: Raw file content as bytes
+
+        Returns:
+            FileMetadata if successful, None otherwise
+        """
+        from .contents import MimeTypes
+
+        mime_type = MimeTypes.Text.from_file_name(file_name)
+        if mime_type:
+            try:
+                data = file_content.decode("utf-8")
+                return FileMetadata(
+                    file_name=file_name,
+                    size=size,
+                    mime_type=mime_type,
+                    data=data,
+                    content_type=ContentTypes.TEXT,
+                )
+            except UnicodeDecodeError:
+                # If it can't be decoded as UTF-8, it's not text
+                pass
+        return None
+
+    def _try_as_image_content(
+        self, file_name: str, size: int, file_content: bytes
+    ) -> Union[FileMetadata, None]:
+        """Try to process file as image content.
+
+        Args:
+            file_name: Name of the file
+            size: Size of the file in bytes
+            file_content: Raw file content as bytes
+
+        Returns:
+            FileMetadata if successful, None otherwise
+        """
+        from .contents import MimeTypes
+
+        mime_type = MimeTypes.Image.from_file_name(file_name)
+        if mime_type:
+            data = base64.b64encode(file_content).decode("utf-8")
+            return FileMetadata(
+                file_name=file_name,
+                size=size,
+                mime_type=mime_type,
+                data=data,
+                content_type=ContentTypes.IMAGE,
+            )
+        return None
+
+    def _try_as_audio_content(
+        self, file_name: str, size: int, file_content: bytes
+    ) -> Union[FileMetadata, None]:
+        """Try to process file as audio content.
+
+        Args:
+            file_name: Name of the file
+            size: Size of the file in bytes
+            file_content: Raw file content as bytes
+
+        Returns:
+            FileMetadata if successful, None otherwise
+        """
+        from .contents import MimeTypes
+
+        mime_type = MimeTypes.Audio.from_file_name(file_name)
+        if mime_type:
+            data = base64.b64encode(file_content).decode("utf-8")
+            return FileMetadata(
+                file_name=file_name,
+                size=size,
+                mime_type=mime_type,
+                data=data,
+                content_type=ContentTypes.AUDIO,
+            )
+        return None

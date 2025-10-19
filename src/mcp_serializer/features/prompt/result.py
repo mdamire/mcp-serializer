@@ -1,8 +1,5 @@
-from ..base.contents import (
-    TextContentSanitizer,
-    ImageContentSanitizer,
-    AudioContentSanitizer,
-)
+from ..base.parsers import FileParser
+from ..base.definitions import ContentTypes
 from .schema import (
     TextContent,
     ImageContent,
@@ -117,35 +114,53 @@ class PromptsResult:
         role: Optional[Roles] = None,
         annotations: Optional[Dict[str, Any]] = None,
     ) -> Union[TextContent, ImageContent, AudioContent]:
-        """Add content from file as a message - automatically detects if it's text, image, or audio."""
-        try:
-            text_sanitizer = TextContentSanitizer(file=file)
-            if text_sanitizer.text and text_sanitizer.mime_type:
-                return self.add_text(text_sanitizer.text, role, annotations)
-        except Exception:
-            pass
+        """Add content from file as a message - automatically detects if it's text, image, or audio.
 
+        Args:
+            file: File path or file object
+            role: Optional role for the message
+            annotations: Optional annotations
+
+        Returns:
+            TextContent, ImageContent, or AudioContent
+
+        Raises:
+            ValueError: If file type cannot be determined
+        """
         try:
-            image_sanitizer = ImageContentSanitizer(file=file)
-            if image_sanitizer.data and image_sanitizer.mime_type:
+            file_metadata = FileParser(file).file_metadata
+
+            content_kwargs = {
+                "role": role,
+                "annotations": annotations,
+            }
+
+            if file_metadata.content_type == ContentTypes.TEXT:
+                return self.add_text(
+                    text=file_metadata.data,
+                    **content_kwargs,
+                )
+            elif file_metadata.content_type == ContentTypes.IMAGE:
                 return self.add_image(
-                    image_sanitizer.data, image_sanitizer.mime_type, role, annotations
+                    data=file_metadata.data,
+                    mime_type=file_metadata.mime_type,
+                    **content_kwargs,
                 )
-        except Exception:
-            pass
-
-        try:
-            audio_sanitizer = AudioContentSanitizer(file=file)
-            if audio_sanitizer.data and audio_sanitizer.mime_type:
+            elif file_metadata.content_type == ContentTypes.AUDIO:
                 return self.add_audio(
-                    audio_sanitizer.data, audio_sanitizer.mime_type, role, annotations
+                    data=file_metadata.data,
+                    mime_type=file_metadata.mime_type,
+                    **content_kwargs,
                 )
-        except Exception:
-            pass
-
-        raise ValueError(
-            f"Unable to process file '{file}'. Could not determine mime type or data."
-        )
+            else:
+                raise ValueError(
+                    f"Unknown content type: {file_metadata.content_type}"
+                )
+        except ValueError as e:
+            raise ValueError(
+                f"Unable to process file '{file}'. Could not determine mime type or data. "
+                "You can use add_text, add_image, or add_audio methods to add content manually."
+            ) from e
 
     def add_embedded_resource(
         self,

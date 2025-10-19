@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass
 
 
@@ -7,6 +7,25 @@ class Empty:
 
     def __repr__(self):
         return "Empty"
+
+
+class ContentTypes:
+    """Content type constants for file metadata."""
+
+    TEXT = "text"
+    IMAGE = "image"
+    AUDIO = "audio"
+
+
+@dataclass
+class FileMetadata:
+    """Metadata for a file."""
+
+    file_name: str
+    size: int
+    mime_type: str
+    data: Union[str, bytes]
+    content_type: ContentTypes
 
 
 @dataclass

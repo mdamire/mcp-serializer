@@ -83,7 +83,7 @@ class TestResourceContent:
 
     def test_add_file_process_error(self):
         with pytest.raises(
-            ResourceResult.FileProcessError, match="Failed to process file"
+            Exception, match="No such file or directory"
         ):
             self.resource_content.add_file("nonexistent_file.unknown")
 

@@ -1,9 +1,6 @@
 import base64
-from ..base.contents import (
-    ImageContentSanitizer,
-    AudioContentSanitizer,
-    TextContentSanitizer,
-)
+from ..base.parsers import FileParser
+from ..base.definitions import ContentTypes
 from .schema import TextContentSchema, BinaryContentSchema
 
 
@@ -74,49 +71,48 @@ class ResourceResult:
         title: str = None,
         annotations: dict = None,
     ):
-        # Try text content first
+        """Add file content by automatically determining its type.
+
+        Args:
+            file: File path or file object
+            uri: Optional URI for the content
+            name: Optional name for the content
+            title: Optional title for the content
+            annotations: Optional annotations
+
+        Returns:
+            TextContentSchema or BinaryContentSchema
+
+        Raises:
+            FileProcessError: If file type cannot be determined
+        """
         try:
-            sanitized_content = TextContentSanitizer(file=file)
-            if sanitized_content.text and sanitized_content.mime_type:
+            file_metadata = FileParser(file).file_metadata
+
+            content_kwargs = {
+                "uri": uri,
+                "mime_type": file_metadata.mime_type,
+                "name": name or file_metadata.file_name,
+                "title": title,
+                "annotations": annotations,
+            }
+
+            if file_metadata.content_type == ContentTypes.TEXT:
                 return self.add_text_content(
-                    text=sanitized_content.text,
-                    mime_type=sanitized_content.mime_type,
-                    uri=uri,
-                    name=name,
-                    title=title,
-                    annotations=annotations,
+                    text=file_metadata.data,
+                    **content_kwargs,
                 )
-        except Exception:
-            pass
-
-        # Try image content
-        try:
-            sanitized_content = ImageContentSanitizer(file=file)
-            if sanitized_content.data and sanitized_content.mime_type:
+            elif file_metadata.content_type in (ContentTypes.IMAGE, ContentTypes.AUDIO):
                 return self.add_binary_content(
-                    blob=sanitized_content.data,
-                    mime_type=sanitized_content.mime_type,
-                    uri=uri,
-                    name=name,
-                    title=title,
-                    annotations=annotations,
+                    blob=file_metadata.data,
+                    **content_kwargs,
                 )
-        except Exception:
-            pass
-
-        # Try audio content
-        try:
-            sanitized_content = AudioContentSanitizer(file=file)
-            if sanitized_content.data and sanitized_content.mime_type:
-                return self.add_binary_content(
-                    blob=sanitized_content.data,
-                    mime_type=sanitized_content.mime_type,
-                    uri=uri,
-                    name=name,
-                    title=title,
-                    annotations=annotations,
+            else:
+                raise self.FileProcessError(
+                    f"Unknown content type: {file_metadata.content_type}"
                 )
-        except Exception:
-            pass
-
-        raise self.FileProcessError(f"Failed to process file: {file}")
+        except ValueError as e:
+            raise self.FileProcessError(
+                f"Failed to process file: {file}. You can use add_text_content or add_binary_content"
+                " to add content manually."
+            ) from e

@@ -2,7 +2,7 @@ import pytest
 from pydantic import BaseModel, Field
 from mcp_serializer.features.tool.assembler import ToolsSchemaAssembler
 from mcp_serializer.features.tool.container import ToolRegistry
-from mcp_serializer.features.tool.contents import ToolsContent
+from mcp_serializer.features.tool.result import ToolsResult
 from mcp_serializer.features.base.parsers import FunctionParser
 from mcp_serializer.features.base.assembler import FeatureSchemaAssembler
 
@@ -159,10 +159,10 @@ class TestToolsSchemaAssembler:
         assert second_page.get("nextCursor") is None  # No more pages
 
     def test_process_result_tools_content(self):
-        tools_content = ToolsContent()
-        tools_content.add_text("Test response")
+        tools_result = ToolsResult()
+        tools_result.add_text_content("Test response")
 
-        result = self.assembler.process_result(tools_content)
+        result = self.assembler.process_result(tools_result)
 
         assert "content" in result
         assert len(result["content"]) == 1

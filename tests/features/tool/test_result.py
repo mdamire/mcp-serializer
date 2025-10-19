@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from pydantic import BaseModel
-from mcp_serializer.features.tool.contents import ToolsContent
+from mcp_serializer.features.tool.result import ToolsResult
 from mcp_serializer.features.tool.schema import (
     TextContent,
     ImageContent,
@@ -9,7 +9,7 @@ from mcp_serializer.features.tool.schema import (
     ResourceLinkContent,
     EmbeddedResource,
 )
-from mcp_serializer.features.resource.contents import ResourceContent
+from mcp_serializer.features.resource.result import ResourceResult
 from mcp_serializer.features.resource.container import ResourceContainer
 
 
@@ -18,9 +18,9 @@ class SampleModel(BaseModel):
     value: int
 
 
-class TestToolsContent:
+class TestToolsResult:
     def setup_method(self):
-        self.tools_content = ToolsContent()
+        self.tools_content = ToolsResult()
 
     def test_init(self):
         assert self.tools_content.content_list == []
@@ -29,11 +29,11 @@ class TestToolsContent:
 
     def test_init_with_resource_container(self):
         mock_container = Mock()
-        tools_content = ToolsContent(resource_container=mock_container)
+        tools_content = ToolsResult(resource_container=mock_container)
         assert tools_content.resource_container == mock_container
 
     def test_add_text_success(self):
-        result = self.tools_content.add_text("Hello world")
+        result = self.tools_content.add_text_content("Hello world")
 
         assert isinstance(result, TextContent)
         assert result.text == "Hello world"
@@ -41,11 +41,11 @@ class TestToolsContent:
 
     def test_add_text_empty_string(self):
         with pytest.raises(ValueError, match="Text must be a non-empty string"):
-            self.tools_content.add_text("")
+            self.tools_content.add_text_content("")
 
     def test_add_text_invalid_type(self):
         with pytest.raises(ValueError, match="Text must be a non-empty string"):
-            self.tools_content.add_text(123)
+            self.tools_content.add_text_content(123)
 
     def test_add_image_success(self):
         # Valid base64 data
@@ -53,7 +53,7 @@ class TestToolsContent:
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGA"
         )
 
-        result = self.tools_content.add_image(valid_base64, "image/png")
+        result = self.tools_content.add_image_content(valid_base64, "image/png")
 
         assert isinstance(result, ImageContent)
         assert result.data == valid_base64
@@ -66,31 +66,26 @@ class TestToolsContent:
         )
         annotations = {"priority": 1}
 
-        result = self.tools_content.add_image(valid_base64, "image/png", annotations)
+        result = self.tools_content.add_image_content(
+            valid_base64, "image/png", annotations
+        )
         assert result.annotations == annotations
 
     def test_add_image_empty_data(self):
         with pytest.raises(ValueError, match="Data must be a non-empty string"):
-            self.tools_content.add_image("", "image/png")
-
-    def test_add_image_no_mime_type(self):
-        valid_base64 = (
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGA"
-        )
-        with pytest.raises(ValueError, match="MIME type is required for image content"):
-            self.tools_content.add_image(valid_base64, "")
+            self.tools_content.add_image_content("", "image/png")
 
     def test_add_image_invalid_base64(self):
         with pytest.raises(
             ValueError, match="Data must be valid base64 encoded string"
         ):
-            self.tools_content.add_image("invalid_base64!", "image/png")
+            self.tools_content.add_image_content("invalid_base64!", "image/png")
 
     def test_add_audio_success(self):
         # Valid base64 audio data
         valid_base64 = "UklGRjIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ4AAAA="
 
-        result = self.tools_content.add_audio(valid_base64, "audio/wav")
+        result = self.tools_content.add_audio_content(valid_base64, "audio/wav")
 
         assert isinstance(result, AudioContent)
         assert result.data == valid_base64
@@ -99,20 +94,15 @@ class TestToolsContent:
 
     def test_add_audio_empty_data(self):
         with pytest.raises(ValueError, match="Data must be a non-empty string"):
-            self.tools_content.add_audio("", "audio/wav")
-
-    def test_add_audio_no_mime_type(self):
-        valid_base64 = "UklGRjIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ4AAAA="
-        with pytest.raises(ValueError, match="MIME type is required for audio content"):
-            self.tools_content.add_audio(valid_base64, "")
+            self.tools_content.add_audio_content("", "audio/wav")
 
     def test_add_audio_invalid_base64(self):
         with pytest.raises(
             ValueError, match="Data must be valid base64 encoded string"
         ):
-            self.tools_content.add_audio("invalid_base64!", "audio/wav")
+            self.tools_content.add_audio_content("invalid_base64!", "audio/wav")
 
-    @patch("mcp_serializer.features.tool.contents.TextContentSanitizer")
+    @patch("mcp_serializer.features.tool.result.TextContentSanitizer")
     def test_add_file_text_success(self, mock_sanitizer):
         mock_instance = Mock()
         mock_instance.text = "File content"
@@ -124,8 +114,8 @@ class TestToolsContent:
         assert isinstance(result, TextContent)
         assert result.text == "File content"
 
-    @patch("mcp_serializer.features.tool.contents.TextContentSanitizer")
-    @patch("mcp_serializer.features.tool.contents.ImageContentSanitizer")
+    @patch("mcp_serializer.features.tool.result.TextContentSanitizer")
+    @patch("mcp_serializer.features.tool.result.ImageContentSanitizer")
     def test_add_file_image_success(self, mock_image_sanitizer, mock_text_sanitizer):
         # Text sanitizer fails
         mock_text_sanitizer.side_effect = Exception("Not text")
@@ -144,26 +134,26 @@ class TestToolsContent:
         assert isinstance(result, ImageContent)
         assert result.data == valid_base64
 
-    @patch("mcp_serializer.features.tool.contents.TextContentSanitizer")
-    @patch("mcp_serializer.features.tool.contents.ImageContentSanitizer")
-    @patch("mcp_serializer.features.tool.contents.AudioContentSanitizer")
+    @patch("mcp_serializer.features.tool.result.TextContentSanitizer")
+    @patch("mcp_serializer.features.tool.result.ImageContentSanitizer")
+    @patch("mcp_serializer.features.tool.result.AudioContentSanitizer")
     def test_add_file_all_fail(self, mock_audio, mock_image, mock_text):
         # All sanitizers fail
         mock_text.side_effect = Exception("Text error")
         mock_image.side_effect = Exception("Image error")
         mock_audio.side_effect = Exception("Audio error")
 
-        with pytest.raises(ValueError, match="Unable to process file"):
+        with pytest.raises(ValueError, match="Unable to determine data or mime type"):
             self.tools_content.add_file("/path/to/unknown.file")
 
     def test_add_resource_link_without_container(self):
-        with pytest.raises(ToolsContent.ResourceContainerRequiredError):
+        with pytest.raises(ToolsResult.ResourceContainerRequiredError):
             self.tools_content.add_resource_link("/a/b/c", mime_type="text/html")
 
     def test_add_resource_link_with_container_success(self):
         # Create actual ResourceContainer and add a resource with content
         resource_container = ResourceContainer()
-        resource_content = ResourceContent()
+        resource_content = ResourceResult()
         resource_content.add_text_content("Sample text content", "text/plain")
 
         resource_container.add_resource(
@@ -174,8 +164,8 @@ class TestToolsContent:
             mimeType="text/plain",
         )
 
-        # Create ToolsContent with the actual resource container
-        tools_content = ToolsContent(resource_container=resource_container)
+        # Create ToolsResult with the actual resource container
+        tools_content = ToolsResult(resource_container=resource_container)
         result = tools_content.add_resource_link("file://test.txt")
 
         assert isinstance(result, ResourceLinkContent)
@@ -185,7 +175,7 @@ class TestToolsContent:
         assert result.mimeType == "text/plain"
 
     def test_add_embedded_resource_no_container_no_data(self):
-        with pytest.raises(ToolsContent.ResourceContainerRequiredError):
+        with pytest.raises(ToolsResult.ResourceContainerRequiredError):
             self.tools_content.add_embedded_resource("https://example.com")
 
     def test_add_embedded_resource_with_text_data(self):
@@ -228,7 +218,7 @@ class TestToolsContent:
             ]
         }
 
-        tools_content = ToolsContent(resource_container=mock_container)
+        tools_content = ToolsResult(resource_container=mock_container)
         result = tools_content.add_embedded_resource("file://test.txt")
 
         assert isinstance(result, EmbeddedResource)
@@ -239,9 +229,9 @@ class TestToolsContent:
         mock_container = Mock()
         mock_container.call.side_effect = Exception("Resource not found")
 
-        tools_content = ToolsContent(resource_container=mock_container)
+        tools_content = ToolsResult(resource_container=mock_container)
 
-        with pytest.raises(ToolsContent.ResourceNotFoundError):
+        with pytest.raises(ToolsResult.ResourceNotFoundError):
             tools_content.add_embedded_resource("file://nonexistent.txt")
 
     def test_add_embedded_resource_no_mime_type(self):
@@ -251,7 +241,7 @@ class TestToolsContent:
             )
 
     def test_add_embedded_resource_no_content(self):
-        with pytest.raises(ToolsContent.ResourceContainerRequiredError):
+        with pytest.raises(ToolsResult.ResourceContainerRequiredError):
             self.tools_content.add_embedded_resource(
                 "https://example.com", mime_type="text/plain"
             )
@@ -284,12 +274,12 @@ class TestToolsContent:
 
     def test_multiple_content_types(self):
         # Add various content types
-        self.tools_content.add_text("Text content")
+        self.tools_content.add_text_content("Text content")
 
         valid_base64 = (
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGA"
         )
-        self.tools_content.add_image(valid_base64, "image/png")
+        self.tools_content.add_image_content(valid_base64, "image/png")
 
         self.tools_content.add_embedded_resource(
             "https://example.com", text="Embedded text", mime_type="text/plain"

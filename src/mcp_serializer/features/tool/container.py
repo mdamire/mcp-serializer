@@ -1,4 +1,3 @@
-from typing import Optional
 from ..base.container import FeatureContainer
 from ..base.definitions import FunctionMetadata
 from .assembler import ToolsSchemaAssembler

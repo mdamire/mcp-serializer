@@ -2,10 +2,10 @@ from typing import Optional
 from pydantic import BaseModel
 import inspect
 from ..base.pagination import Pagination
-from .schema import ToolsDefinitionSchema, ToolsListSchema, ContentSchema
+from .schema import ToolsDefinitionSchema, ToolsListSchema, ResultSchema
 from ..base.assembler import FeatureSchemaAssembler
 from ..base.schema import JsonSchema, JsonSchemaTypes
-from .contents import ToolsContent
+from .result import ToolsResult
 
 
 class ToolsSchemaAssembler(FeatureSchemaAssembler):
@@ -100,17 +100,19 @@ class ToolsSchemaAssembler(FeatureSchemaAssembler):
         ).model_dump()
 
     def process_result(self, result):
-        content_schema = ContentSchema()
-        if isinstance(result, ToolsContent):
+        result_schema = ResultSchema()
+        if isinstance(result, ToolsResult):
             if result.content_list:
-                content_schema.content = [
+                result_schema.content = [
                     item.model_dump() if hasattr(item, "model_dump") else item
                     for item in result.content_list
                 ]
             if result.structured_content:
-                content_schema.structuredContent = result.structured_content
+                result_schema.structuredContent = result.structured_content
+            if result.is_error:
+                result_schema.isError = result.is_error
         elif isinstance(result, BaseModel):
-            content_schema.structuredContent = result.model_dump()
+            result_schema.structuredContent = result.model_dump()
         else:
             raise self.UnsupportedResultTypeError(type(result))
-        return self._build_non_none_dict(content_schema)
+        return self._build_non_none_dict(result_schema)

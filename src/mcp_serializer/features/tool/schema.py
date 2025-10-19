@@ -23,12 +23,13 @@ class ToolsListSchema(BaseModel):
 class TextContent(BaseModel):
     type: str = "text"
     text: str
+    annotations: Optional[Dict[str, Any]] = None
 
 
 class ImageContent(BaseModel):
     type: str = "image"
     data: str  # Base64-encoded image data
-    mimeType: str
+    mimeType: Optional[str] = None
     annotations: Optional[Dict[str, Any]] = None
 
     @field_validator("data")
@@ -44,7 +45,7 @@ class ImageContent(BaseModel):
 class AudioContent(BaseModel):
     type: str = "audio"
     data: str  # Base64-encoded audio data
-    mimeType: str
+    mimeType: Optional[str] = None
     annotations: Optional[Dict[str, Any]] = None
 
     @field_validator("data")
@@ -71,6 +72,7 @@ class EmbeddedResource(BaseModel):
     resource: Union[TextContentSchema, BinaryContentSchema]
 
 
-class ContentSchema(BaseModel):
+class ResultSchema(BaseModel):
     content: Optional[List[dict]] = None
     structuredContent: Optional[dict] = None
+    isError: Optional[bool] = None

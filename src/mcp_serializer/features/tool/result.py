@@ -16,37 +16,41 @@ from ..resource.schema import TextContentSchema, BinaryContentSchema
 from ..resource.container import ResourceContainer
 
 
-class ToolsContent:
+class ToolsResult:
     class ResourceNotFoundError(Exception):
         pass
 
     class ResourceContainerRequiredError(Exception):
         pass
 
-    def __init__(self, resource_container: ResourceContainer = None):
+    def __init__(
+        self, resource_container: ResourceContainer = None, is_error: bool = False
+    ):
         self.content_list = []
         self.resource_container = resource_container
         self.structured_content = None
+        self.is_error = is_error
 
-    def add_text(
+    def add_text_content(
         self, text: str, annotations: Optional[Dict[str, Any]] = None
     ) -> TextContent:
         """Add text content."""
         if not text or not isinstance(text, str):
             raise ValueError("Text must be a non-empty string")
 
-        text_content = TextContent(text=text)
+        text_content = TextContent(text=text, annotations=annotations)
         self.content_list.append(text_content)
         return text_content
 
-    def add_image(
-        self, data: str, mime_type: str, annotations: Optional[Dict[str, Any]] = None
+    def add_image_content(
+        self,
+        data: str,
+        mime_type: Optional[str] = None,
+        annotations: Optional[Dict[str, Any]] = None,
     ) -> ImageContent:
         """Add image content with base64 data."""
         if not data or not isinstance(data, str):
             raise ValueError("Data must be a non-empty string")
-        if not mime_type:
-            raise ValueError("MIME type is required for image content")
 
         image_content = ImageContent(
             data=data, mimeType=mime_type, annotations=annotations
@@ -54,14 +58,15 @@ class ToolsContent:
         self.content_list.append(image_content)
         return image_content
 
-    def add_audio(
-        self, data: str, mime_type: str, annotations: Optional[Dict[str, Any]] = None
+    def add_audio_content(
+        self,
+        data: str,
+        mime_type: Optional[str] = None,
+        annotations: Optional[Dict[str, Any]] = None,
     ) -> AudioContent:
         """Add audio content with base64 data."""
         if not data or not isinstance(data, str):
             raise ValueError("Data must be a non-empty string")
-        if not mime_type:
-            raise ValueError("MIME type is required for audio content")
 
         audio_content = AudioContent(
             data=data, mimeType=mime_type, annotations=annotations
@@ -77,7 +82,7 @@ class ToolsContent:
         try:
             text_sanitizer = TextContentSanitizer(file=file)
             if text_sanitizer.text and text_sanitizer.mime_type:
-                return self.add_text(text_sanitizer.text, annotations)
+                return self.add_text_content(text_sanitizer.text, annotations)
         except Exception as e:
             pass
 
@@ -85,7 +90,7 @@ class ToolsContent:
         try:
             image_sanitizer = ImageContentSanitizer(file=file)
             if image_sanitizer.data and image_sanitizer.mime_type:
-                return self.add_image(
+                return self.add_image_content(
                     image_sanitizer.data, image_sanitizer.mime_type, annotations
                 )
         except Exception as e:
@@ -95,14 +100,15 @@ class ToolsContent:
         try:
             audio_sanitizer = AudioContentSanitizer(file=file)
             if audio_sanitizer.data and audio_sanitizer.mime_type:
-                return self.add_audio(
+                return self.add_audio_content(
                     audio_sanitizer.data, audio_sanitizer.mime_type, annotations
                 )
         except Exception as e:
             pass
 
         raise ValueError(
-            f"Unable to process file '{file}'. Could not determine mime type or data."
+            f"Unable to determine data or mime type from file '{file}'. "
+            "You can use add_text, add_image, or add_audio methods to add content manually."
         )
 
     def _get_resource_info(self, uri: str) -> dict:

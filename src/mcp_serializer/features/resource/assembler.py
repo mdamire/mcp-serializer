@@ -6,7 +6,7 @@ from .schema import (
     ResourceDefinitionSchema,
 )
 from .result import ResourceResult
-from .schema import ContentSchema
+from .schema import ResultSchema
 from ..base.assembler import FeatureSchemaAssembler
 from ..base.pagination import Pagination
 
@@ -132,6 +132,6 @@ class ResourceSchemaAssembler(FeatureSchemaAssembler):
 
             content_schema_list.append(updated_content)
 
-        content_schema = ContentSchema(contents=content_schema_list)
-        content_schema = self._build_non_none_dict(content_schema)
-        return content_schema
+        result_schema = ResultSchema(contents=content_schema_list)
+        result_schema = self._build_non_none_dict(result_schema)
+        return result_schema

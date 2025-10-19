@@ -95,5 +95,5 @@ class BinaryContentSchema(BaseContentSchema):
     blob: str
 
 
-class ContentSchema(BaseModel):
+class ResultSchema(BaseModel):
     contents: List[Union[TextContentSchema, BinaryContentSchema]]

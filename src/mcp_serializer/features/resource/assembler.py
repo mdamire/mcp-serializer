@@ -5,7 +5,7 @@ from .schema import (
     ResourceTemplateListResultSchema,
     ResourceDefinitionSchema,
 )
-from .contents import ResourceContent
+from .result import ResourceResult
 from .schema import ContentSchema
 from ..base.assembler import FeatureSchemaAssembler
 from ..base.pagination import Pagination
@@ -107,21 +107,24 @@ class ResourceSchemaAssembler(FeatureSchemaAssembler):
         schema = self._build_non_none_dict(schema)
         return schema
 
-    def process_content(self, resource_content, resource_registry):
-        if not isinstance(resource_content, ResourceContent):
-            raise self.UnsupportedResultTypeError(type(resource_content))
+    def process_content(self, resource_result, resource_registry):
+        if not isinstance(resource_result, ResourceResult):
+            raise self.UnsupportedResultTypeError(type(resource_result))
 
         content_schema_list = []
-        for content in resource_content.content_list:
+        for content in resource_result.content_list:
+            # get info from content/registry/metadata
+            name = content.name or resource_registry.extra.get("name")
+            title = content.title or resource_registry.extra.get("title")
+            if hasattr(resource_registry, "metadata"):
+                name = name or resource_registry.metadata.name
+                title = title or resource_registry.metadata.title
+
             updated_content = content.model_copy(
                 update={
                     "uri": content.uri or resource_registry.uri,
-                    "name": content.name
-                    or resource_registry.extra.get("name")
-                    or resource_registry.metadata.name,
-                    "title": content.title
-                    or resource_registry.extra.get("title")
-                    or resource_registry.metadata.title,
+                    "name": name,
+                    "title": title,
                     "annotations": content.annotations
                     or resource_registry.extra.get("annotations"),
                 }

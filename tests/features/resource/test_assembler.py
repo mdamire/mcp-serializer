@@ -1,7 +1,7 @@
 import pytest
 from mcp_serializer.features.resource.assembler import ResourceSchemaAssembler
 from mcp_serializer.features.resource.container import FunctionRegistry
-from mcp_serializer.features.resource.contents import ResourceContent
+from mcp_serializer.features.resource.result import ResourceResult
 from mcp_serializer.features.base.parsers import FunctionParser
 from mcp_serializer.features.base.assembler import FeatureSchemaAssembler
 from mcp_serializer.features.resource.schema import AnnotationSchema
@@ -78,13 +78,15 @@ class TestResourceSchemaAssembler:
         def sample_func():
             return "test"
 
-        registry = FunctionRegistry(sample_func, "file://test.txt")
+        registry = FunctionRegistry(
+            FunctionParser(sample_func).function_metadata, "file://test.txt"
+        )
         registry.extra = {"name": "test-file"}
 
-        resource_content = ResourceContent()
-        resource_content.add_text_content(text="Hello world", mime_type="text/plain")
+        resource_result = ResourceResult()
+        resource_result.add_text_content(text="Hello world", mime_type="text/plain")
 
-        result = self.assembler.process_content(resource_content, registry)
+        result = self.assembler.process_content(resource_result, registry)
 
         assert "contents" in result
         assert len(result["contents"]) == 1
@@ -96,18 +98,20 @@ class TestResourceSchemaAssembler:
         def sample_func():
             return "test"
 
-        registry = FunctionRegistry(sample_func, "file://test.bin")
+        registry = FunctionRegistry(
+            FunctionParser(sample_func).function_metadata, "file://test.bin"
+        )
         annotation = AnnotationSchema(
             audience="user", priority=0.5, lastModified="2021-01-01T00:00:00Z"
         )
         registry.extra = {"annotations": annotation}
 
-        resource_content = ResourceContent()
-        resource_content.add_binary_content(
+        resource_result = ResourceResult()
+        resource_result.add_binary_content(
             blob="aGVsbG8=", mime_type="application/octet-stream"
         )
 
-        result = self.assembler.process_content(resource_content, registry)
+        result = self.assembler.process_content(resource_result, registry)
 
         assert "contents" in result
         assert len(result["contents"]) == 1

@@ -1,7 +1,7 @@
 import pytest
 import tempfile
 from pathlib import Path
-from mcp_serializer.features.resource.contents import ResourceContent
+from mcp_serializer.features.resource.result import ResourceResult
 from mcp_serializer.features.resource.schema import (
     TextContentSchema,
     BinaryContentSchema,
@@ -11,7 +11,7 @@ from mcp_serializer.features.resource.schema import (
 
 class TestResourceContent:
     def setup_method(self):
-        self.resource_content = ResourceContent()
+        self.resource_content = ResourceResult()
 
     def test_init(self):
         assert self.resource_content.content_list == []
@@ -83,7 +83,7 @@ class TestResourceContent:
 
     def test_add_file_process_error(self):
         with pytest.raises(
-            ResourceContent.FileProcessError, match="Failed to process file"
+            ResourceResult.FileProcessError, match="Failed to process file"
         ):
             self.resource_content.add_file("nonexistent_file.unknown")
 

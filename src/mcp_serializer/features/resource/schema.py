@@ -81,7 +81,7 @@ class ResourceTemplateListResultSchema(BaseModel):
 
 class BaseContentSchema(BaseModel):
     uri: str
-    mimeType: str
+    mimeType: Optional[str] = None
     name: Optional[str] = None
     title: Optional[str] = None
     annotations: Optional[AnnotationSchema] = None

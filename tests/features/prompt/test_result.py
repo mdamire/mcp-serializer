@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from pydantic import BaseModel
-from mcp_serializer.features.prompt.contents import PromptsContent
+from mcp_serializer.features.prompt.result import PromptsResult
 from mcp_serializer.features.prompt.schema import (
     TextContent,
     ImageContent,
@@ -9,32 +9,32 @@ from mcp_serializer.features.prompt.schema import (
     EmbeddedResource,
 )
 from mcp_serializer.features.resource.container import ResourceContainer
-from mcp_serializer.features.resource.contents import ResourceContent
+from mcp_serializer.features.resource.result import ResourceResult
 
 
-class TestPromptsContent:
+class TestPromptsResult:
     def setup_method(self):
-        self.prompts_content = PromptsContent()
+        self.prompts_content = PromptsResult()
 
     def test_init_and_roles_enum(self):
         # Test default initialization
         assert self.prompts_content.messages == []
-        assert self.prompts_content.default_role == PromptsContent.Roles.ASSISTANT
+        assert self.prompts_content.default_role == PromptsResult.Roles.ASSISTANT
         assert self.prompts_content.resource_container is None
 
         # Test Roles enum
-        assert PromptsContent.Roles.USER.value == "user"
-        assert PromptsContent.Roles.ASSISTANT.value == "assistant"
-        assert PromptsContent.Roles.has_value("user") is True
-        assert PromptsContent.Roles.has_value("invalid") is False
+        assert PromptsResult.Roles.USER.value == "user"
+        assert PromptsResult.Roles.ASSISTANT.value == "assistant"
+        assert PromptsResult.Roles.has_value("user") is True
+        assert PromptsResult.Roles.has_value("invalid") is False
 
         # Test with custom role
-        custom_prompts = PromptsContent(role=PromptsContent.Roles.USER)
-        assert custom_prompts.default_role == PromptsContent.Roles.USER
+        custom_prompts = PromptsResult(role=PromptsResult.Roles.USER)
+        assert custom_prompts.default_role == PromptsResult.Roles.USER
 
     def test_add_text_with_roles(self):
         # Test with explicit role
-        result1 = self.prompts_content.add_text("Hello", role=PromptsContent.Roles.USER)
+        result1 = self.prompts_content.add_text("Hello", role=PromptsResult.Roles.USER)
         assert isinstance(result1, TextContent)
         assert result1.text == "Hello"
         assert len(self.prompts_content.messages) == 1
@@ -59,7 +59,7 @@ class TestPromptsContent:
 
         # Test image
         image_result = self.prompts_content.add_image(
-            valid_base64, "image/png", role=PromptsContent.Roles.USER
+            valid_base64, "image/png", role=PromptsResult.Roles.USER
         )
         assert isinstance(image_result, ImageContent)
         assert image_result.data == valid_base64
@@ -69,7 +69,7 @@ class TestPromptsContent:
         # Test audio
         audio_base64 = "UklGRjIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ4AAAA="
         audio_result = self.prompts_content.add_audio(
-            audio_base64, "audio/wav", role=PromptsContent.Roles.ASSISTANT
+            audio_base64, "audio/wav", role=PromptsResult.Roles.ASSISTANT
         )
         assert isinstance(audio_result, AudioContent)
         assert audio_result.data == audio_base64
@@ -90,7 +90,7 @@ class TestPromptsContent:
         with pytest.raises(ValueError, match="MIME type is required for audio content"):
             self.prompts_content.add_audio("valid_data", "")
 
-    @patch("mcp_serializer.features.prompt.contents.TextContentSanitizer")
+    @patch("mcp_serializer.features.prompt.result.TextContentSanitizer")
     def test_add_file_text_success(self, mock_sanitizer):
         mock_instance = Mock()
         mock_instance.text = "File content"
@@ -98,16 +98,16 @@ class TestPromptsContent:
         mock_sanitizer.return_value = mock_instance
 
         result = self.prompts_content.add_file(
-            "/path/to/file.txt", role=PromptsContent.Roles.USER
+            "/path/to/file.txt", role=PromptsResult.Roles.USER
         )
 
         assert isinstance(result, TextContent)
         assert result.text == "File content"
         assert self.prompts_content.messages[0]["role"] == "user"
 
-    @patch("mcp_serializer.features.prompt.contents.TextContentSanitizer")
-    @patch("mcp_serializer.features.prompt.contents.ImageContentSanitizer")
-    @patch("mcp_serializer.features.prompt.contents.AudioContentSanitizer")
+    @patch("mcp_serializer.features.prompt.result.TextContentSanitizer")
+    @patch("mcp_serializer.features.prompt.result.ImageContentSanitizer")
+    @patch("mcp_serializer.features.prompt.result.AudioContentSanitizer")
     def test_add_file_all_fail(self, mock_audio, mock_image, mock_text):
         mock_text.side_effect = Exception("Text error")
         mock_image.side_effect = Exception("Image error")
@@ -121,7 +121,7 @@ class TestPromptsContent:
             "https://example.com",
             text="Embedded content",
             mime_type="text/plain",
-            role=PromptsContent.Roles.USER,
+            role=PromptsResult.Roles.USER,
         )
 
         assert isinstance(result, EmbeddedResource)
@@ -132,15 +132,15 @@ class TestPromptsContent:
     def test_add_embedded_resource_with_container(self):
         # Create ResourceContainer with content
         resource_container = ResourceContainer()
-        resource_content = ResourceContent()
+        resource_content = ResourceResult()
         resource_content.add_text_content("Resource text", "text/plain")
 
         resource_container.add_resource(
             "file://test.txt", resource_content, name="Test"
         )
 
-        # Create PromptsContent with resource container
-        prompts_content = PromptsContent(resource_container=resource_container)
+        # Create PromptsResult with resource container
+        prompts_content = PromptsResult(resource_container=resource_container)
         result = prompts_content.add_embedded_resource("file://test.txt")
 
         assert isinstance(result, EmbeddedResource)
@@ -149,7 +149,7 @@ class TestPromptsContent:
 
     def test_add_embedded_resource_errors(self):
         # Test without container and without data
-        with pytest.raises(PromptsContent.ResourceContainerRequiredError):
+        with pytest.raises(PromptsResult.ResourceContainerRequiredError):
             self.prompts_content.add_embedded_resource("file://test.txt")
 
         # Test without mime type
@@ -169,14 +169,14 @@ class TestPromptsContent:
 
     def test_complex_conversation_flow(self):
         """Test a realistic conversation with multiple content types and roles."""
-        prompts_content = PromptsContent()
+        prompts_content = PromptsResult()
 
         # User starts conversation
-        prompts_content.add_text("Hello, I need help", role=PromptsContent.Roles.USER)
+        prompts_content.add_text("Hello, I need help", role=PromptsResult.Roles.USER)
 
         # Assistant responds
         prompts_content.add_text(
-            "I'm happy to help! What do you need?", role=PromptsContent.Roles.ASSISTANT
+            "I'm happy to help! What do you need?", role=PromptsResult.Roles.ASSISTANT
         )
 
         # User sends image
@@ -184,7 +184,7 @@ class TestPromptsContent:
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGA"
         )
         prompts_content.add_image(
-            valid_base64, "image/png", role=PromptsContent.Roles.USER
+            valid_base64, "image/png", role=PromptsResult.Roles.USER
         )
 
         # Assistant responds with embedded resource
@@ -192,7 +192,7 @@ class TestPromptsContent:
             "https://example.com/help",
             text="Here's a helpful guide",
             mime_type="text/markdown",
-            role=PromptsContent.Roles.ASSISTANT,
+            role=PromptsResult.Roles.ASSISTANT,
         )
 
         assert len(prompts_content.messages) == 4

@@ -7,7 +7,7 @@ from .schema import (
 )
 from ..base.assembler import FeatureSchemaAssembler
 from ..base.schema import JsonSchemaTypes
-from .contents import PromptsContent
+from .result import PromptsResult
 from ..base.pagination import Pagination
 from ..base.definitions import FunctionMetadata
 
@@ -64,9 +64,9 @@ class PromptsSchemaAssembler(FeatureSchemaAssembler):
             prompts=paginated_prompts, nextCursor=next_cursor
         ).model_dump()
 
-    def process_result(self, result: PromptsContent, registry):
+    def process_result(self, result: PromptsResult, registry):
         """Process the result from prompt function calls."""
-        if not isinstance(result, PromptsContent):
+        if not isinstance(result, PromptsResult):
             raise self.UnsupportedResultTypeError(
                 f"Unsupported result type: {type(result)}"
             )

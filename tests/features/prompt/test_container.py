@@ -1,6 +1,6 @@
 import pytest
 from mcp_serializer.features.prompt.container import PromptsContainer, PromptRegistry
-from mcp_serializer.features.prompt.contents import PromptsContent
+from mcp_serializer.features.prompt.result import PromptsResult
 from mcp_serializer.features.base.container import FeatureContainer
 from mcp_serializer.features.base.parsers import FunctionParser
 
@@ -8,7 +8,7 @@ from mcp_serializer.features.base.parsers import FunctionParser
 class TestPromptRegistry:
     def test_init(self):
         def sample_prompt():
-            return PromptsContent()
+            return PromptsResult()
 
         metadata = FunctionParser(sample_prompt).function_metadata
         registry = PromptRegistry(metadata, {"name": "test_prompt"})
@@ -18,7 +18,7 @@ class TestPromptRegistry:
 
     def test_init_without_extra(self):
         def sample_prompt():
-            return PromptsContent()
+            return PromptsResult()
 
         metadata = FunctionParser(sample_prompt).function_metadata
         registry = PromptRegistry(metadata)
@@ -37,12 +37,12 @@ class TestPromptsContainer:
     def test_register_and_call_basic(self):
         def greeting_prompt():
             """Generate a greeting"""
-            content = PromptsContent()
-            content.add_text("Hello!", role=PromptsContent.Roles.ASSISTANT)
+            content = PromptsResult()
+            content.add_text("Hello!", role=PromptsResult.Roles.ASSISTANT)
             return content
 
         # Register the prompt
-        metadata = self.container.register(greeting_prompt, name="greeting")
+        metadata = self.container.register(greeting_prompt)
         assert metadata.name == "greeting_prompt"
         assert "greeting_prompt" in self.container.registrations
 
@@ -55,16 +55,16 @@ class TestPromptsContainer:
     def test_register_and_call_with_parameters(self):
         def personalized_prompt(name: str, tone: str = "friendly"):
             """Generate personalized greeting"""
-            content = PromptsContent()
+            content = PromptsResult()
             if tone == "formal":
                 content.add_text(
-                    f"Good day, {name}.", role=PromptsContent.Roles.ASSISTANT
+                    f"Good day, {name}.", role=PromptsResult.Roles.ASSISTANT
                 )
             else:
-                content.add_text(f"Hey {name}!", role=PromptsContent.Roles.ASSISTANT)
+                content.add_text(f"Hey {name}!", role=PromptsResult.Roles.ASSISTANT)
             return content
 
-        self.container.register(personalized_prompt, name="personalized_greeting")
+        self.container.register(personalized_prompt)
 
         # Test with default parameter
         result1 = self.container.call("personalized_prompt", name="Alice")
@@ -81,7 +81,7 @@ class TestPromptsContainer:
     def test_call_with_invalid_parameters(self):
         def strict_prompt(required_param: str):
             """Prompt with required parameter"""
-            content = PromptsContent()
+            content = PromptsResult()
             content.add_text(f"Message: {required_param}")
             return content
 
@@ -93,7 +93,7 @@ class TestPromptsContainer:
     def test_call_with_wrong_parameter_type(self):
         def typed_prompt(count: int):
             """Prompt expecting integer"""
-            content = PromptsContent()
+            content = PromptsResult()
             content.add_text(f"Count: {count}")
             return content
 
@@ -105,14 +105,14 @@ class TestPromptsContainer:
     def test_multiple_prompt_registration(self):
         def prompt1():
             """First prompt"""
-            return PromptsContent()
+            return PromptsResult()
 
         def prompt2():
             """Second prompt"""
-            return PromptsContent()
+            return PromptsResult()
 
-        self.container.register(prompt1, name="first")
-        self.container.register(prompt2, name="second")
+        self.container.register(prompt1)
+        self.container.register(prompt2)
 
         assert len(self.container.registrations) == 2
         assert "prompt1" in self.container.registrations

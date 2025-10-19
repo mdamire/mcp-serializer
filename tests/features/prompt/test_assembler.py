@@ -1,7 +1,7 @@
 import pytest
 from mcp_serializer.features.prompt.assembler import PromptsSchemaAssembler
 from mcp_serializer.features.prompt.container import PromptRegistry
-from mcp_serializer.features.prompt.contents import PromptsContent
+from mcp_serializer.features.prompt.result import PromptsResult
 from mcp_serializer.features.base.parsers import FunctionParser
 from mcp_serializer.features.base.assembler import FeatureSchemaAssembler
 
@@ -13,7 +13,7 @@ class TestPromptsSchemaAssembler:
     def test_init_and_add_registry(self):
         def sample_prompt(name: str):
             """Sample prompt function"""
-            content = PromptsContent()
+            content = PromptsResult()
             content.add_text(f"Hello {name}")
             return content
 
@@ -28,7 +28,7 @@ class TestPromptsSchemaAssembler:
 
     def test_create_arguments_schema(self):
         def prompt_with_args(name: str, age: int = 25, active: bool = True):
-            return PromptsContent()
+            return PromptsResult()
 
         metadata = FunctionParser(prompt_with_args).function_metadata
         arguments_schema = self.assembler._create_arguments_schema(metadata)
@@ -45,7 +45,7 @@ class TestPromptsSchemaAssembler:
         for i in range(15):
 
             def sample_prompt():
-                return PromptsContent()
+                return PromptsResult()
 
             metadata = FunctionParser(sample_prompt).function_metadata
             registry = PromptRegistry(metadata, {"name": f"prompt{i}"})
@@ -68,15 +68,15 @@ class TestPromptsSchemaAssembler:
 
     def test_process_result(self):
         def sample_prompt():
-            return PromptsContent()
+            return PromptsResult()
 
         metadata = FunctionParser(sample_prompt).function_metadata
         registry = PromptRegistry(metadata, {"description": "Test description"})
 
-        # Create PromptsContent with messages
-        content = PromptsContent()
-        content.add_text("Hello", role=PromptsContent.Roles.USER)
-        content.add_text("Hi there!", role=PromptsContent.Roles.ASSISTANT)
+        # Create PromptsResult with messages
+        content = PromptsResult()
+        content.add_text("Hello", role=PromptsResult.Roles.USER)
+        content.add_text("Hi there!", role=PromptsResult.Roles.ASSISTANT)
 
         result = self.assembler.process_result(content, registry)
 
@@ -89,13 +89,13 @@ class TestPromptsSchemaAssembler:
 
     def test_process_result_with_registry_fallback(self):
         def sample_prompt():
-            return PromptsContent()
+            return PromptsResult()
 
         metadata = FunctionParser(sample_prompt).function_metadata
         registry = PromptRegistry(metadata, {"description": "Registry description"})
 
         # Content without description
-        content = PromptsContent()
+        content = PromptsResult()
         content.add_text("Test message")
 
         result = self.assembler.process_result(content, registry)
@@ -105,7 +105,7 @@ class TestPromptsSchemaAssembler:
 
     def test_process_result_unsupported_type(self):
         def sample_prompt():
-            return PromptsContent()
+            return PromptsResult()
 
         metadata = FunctionParser(sample_prompt).function_metadata
         registry = PromptRegistry(metadata)

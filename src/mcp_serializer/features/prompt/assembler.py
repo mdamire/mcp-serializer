@@ -1,5 +1,10 @@
 from typing import Optional
-from .schema import PromptDefinitionSchema, PromptsListSchema, PromptResultSchema
+from .schema import (
+    ArgumentSchema,
+    PromptDefinitionSchema,
+    PromptsListSchema,
+    PromptResultSchema,
+)
 from ..base.assembler import FeatureSchemaAssembler
 from ..base.schema import JsonSchemaTypes
 from .contents import PromptsContent
@@ -39,13 +44,13 @@ class PromptsSchemaAssembler(FeatureSchemaAssembler):
         arguments = []
         for arg in metadata.arguments:
             json_type = JsonSchemaTypes.from_python_type(arg.type_hint)
-            arg_schema = {
-                "name": arg.name,
-                "type": json_type,
-                "description": arg.description,
-                "required": arg.required,
-            }
-            arguments.append(arg_schema)
+            arg_schema = ArgumentSchema(
+                name=arg.name,
+                type=json_type,
+                description=arg.description,
+                required=arg.required,
+            )
+            arguments.append(arg_schema.model_dump())
 
         return arguments
 

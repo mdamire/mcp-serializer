@@ -4,11 +4,18 @@ from ..resource.schema import TextContentSchema, BinaryContentSchema
 import base64
 
 
+class ArgumentSchema(BaseModel):
+    name: str
+    type: str
+    description: Optional[str] = None
+    required: bool = True
+
+
 class PromptDefinitionSchema(BaseModel):
     name: str
     title: Optional[str] = None
     description: Optional[str] = None
-    arguments: Optional[List[Dict[str, Any]]] = None
+    arguments: Optional[List[ArgumentSchema]] = None
 
 
 class PromptsListSchema(BaseModel):

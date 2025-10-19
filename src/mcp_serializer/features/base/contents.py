@@ -77,13 +77,20 @@ class MimeTypes:
     class Text(MimeTypeMapper):
         PLAIN = "text/plain"
         HTML = "text/html"
+        HTM = "text/html"
+        XHTML = "application/xhtml+xml"
+        MHTML = "multipart/related"
         CSS = "text/css"
         JAVASCRIPT = "text/javascript"
         JSON = "application/json"
         XML = "text/xml"
+        SVG = "image/svg+xml"
         MARKDOWN = "text/markdown"
         CSV = "text/csv"
         YAML = "text/yaml"
+        PDF = "application/pdf"
+        FORM_URLENCODED = "application/x-www-form-urlencoded"
+        FORM_DATA = "multipart/form-data"
         PYTHON = "text/x-python"
         JAVA = "text/x-java"
         CPP = "text/x-c++src"
@@ -102,14 +109,20 @@ class MimeTypes:
                 ".txt": cls.PLAIN,
                 ".html": cls.HTML,
                 ".htm": cls.HTML,
+                ".xhtml": cls.XHTML,
+                ".xht": cls.XHTML,
+                ".mhtml": cls.MHTML,
+                ".mht": cls.MHTML,
                 ".css": cls.CSS,
                 ".js": cls.JAVASCRIPT,
                 ".json": cls.JSON,
                 ".xml": cls.XML,
+                ".svg": cls.SVG,
                 ".md": cls.MARKDOWN,
                 ".csv": cls.CSV,
                 ".yml": cls.YAML,
                 ".yaml": cls.YAML,
+                ".pdf": cls.PDF,
                 ".py": cls.PYTHON,
                 ".java": cls.JAVA,
                 ".cpp": cls.CPP,

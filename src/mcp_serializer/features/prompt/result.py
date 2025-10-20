@@ -153,9 +153,7 @@ class PromptsResult:
                     **content_kwargs,
                 )
             else:
-                raise ValueError(
-                    f"Unknown content type: {file_metadata.content_type}"
-                )
+                raise ValueError(f"Unknown content type: {file_metadata.content_type}")
         except ValueError as e:
             raise ValueError(
                 f"Unable to process file '{file}'. Could not determine mime type or data. "

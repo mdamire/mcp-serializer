@@ -87,7 +87,9 @@ class RPCRequestManager:
                     data["invalid_parameter_name"] = e.param_name
                     data["invalid_parameter_value"] = e.value
                     data["expected_parameter_type"] = e.param_type
-                    error = errors.InvalidParams(message="Invalid parameters for tools", data=data)
+                    error = errors.InvalidParams(
+                        message="Invalid parameters for tools", data=data
+                    )
                 elif isinstance(e, FeatureContainer.RequiredParameterNotFound):
                     data["missing_parameter"] = e.param_name
                     error = errors.InvalidParams(
@@ -155,7 +157,9 @@ class RPCRequestManager:
                     data["invalid_parameter_name"] = e.param_name
                     data["invalid_parameter_value"] = e.value
                     data["expected_parameter_type"] = e.param_type
-                    error = errors.InvalidParams(message="Invalid parameters for prompts", data=data)
+                    error = errors.InvalidParams(
+                        message="Invalid parameters for prompts", data=data
+                    )
                 elif isinstance(e, FeatureContainer.RequiredParameterNotFound):
                     data["missing_parameter"] = e.param_name
                     error = errors.InvalidParams(

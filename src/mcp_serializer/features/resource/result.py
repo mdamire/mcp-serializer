@@ -1,6 +1,6 @@
 import base64
 from ..base.parsers import FileParser
-from ..base.definitions import ContentTypes
+from ..base.definitions import ContentTypes, FileMetadata
 from .schema import TextContentSchema, BinaryContentSchema
 
 
@@ -63,6 +63,38 @@ class ResourceResult:
         self.content_list.append(binary_content)
         return binary_content
 
+    def _add_file_metadata(
+        self,
+        file_metadata: FileMetadata,
+        uri=None,
+        name=None,
+        title=None,
+        annotations=None,
+    ):
+        content_kwargs = {
+            "uri": uri,
+            "mime_type": file_metadata.mime_type,
+            "name": name or file_metadata.file_name,
+            "title": title,
+            "annotations": annotations,
+        }
+
+        if file_metadata.content_type == ContentTypes.TEXT:
+            return self.add_text_content(
+                text=file_metadata.data,
+                **content_kwargs,
+            )
+        elif file_metadata.content_type in (ContentTypes.IMAGE, ContentTypes.AUDIO):
+            return self.add_binary_content(
+                blob=file_metadata.data,
+                **content_kwargs,
+            )
+        else:
+            raise self.FileProcessError(
+                f"Could not determine content type for file: {file_metadata.file_name}. "
+                "You can use add_text_content or add_binary_content to add content manually."
+            )
+
     def add_file(
         self,
         file: str,
@@ -88,31 +120,9 @@ class ResourceResult:
         """
         try:
             file_metadata = FileParser(file).file_metadata
-
-            content_kwargs = {
-                "uri": uri,
-                "mime_type": file_metadata.mime_type,
-                "name": name or file_metadata.file_name,
-                "title": title,
-                "annotations": annotations,
-            }
-
-            if file_metadata.content_type == ContentTypes.TEXT:
-                return self.add_text_content(
-                    text=file_metadata.data,
-                    **content_kwargs,
-                )
-            elif file_metadata.content_type in (ContentTypes.IMAGE, ContentTypes.AUDIO):
-                return self.add_binary_content(
-                    blob=file_metadata.data,
-                    **content_kwargs,
-                )
-            else:
-                raise self.FileProcessError(
-                    f"Unknown content type: {file_metadata.content_type}"
-                )
         except ValueError as e:
             raise self.FileProcessError(
-                f"Failed to process file: {file}. You can use add_text_content or add_binary_content"
+                f"Failed to parse file metadata. You can use add_text_content or add_binary_content"
                 " to add content manually."
             ) from e
+        return self._add_file_metadata(file_metadata, uri, name, title, annotations)

@@ -29,46 +29,26 @@ class ResourceContainer(FeatureContainer):
 
     def _add_http_resource(self, uri: str, extra: dict):
         """Determine mime type from URL file extension and add to extra."""
-        try:
-            # Parse the URL to get the path
-            url_path = urlparse(uri).path
-
-            mime_type = MimeTypes.Text.from_file_name(url_path)
-            if not mime_type:
-                mime_type = MimeTypes.Image.from_file_name(url_path)
-            if not mime_type:
-                mime_type = MimeTypes.Audio.from_file_name(url_path)
-
-            if mime_type:
-                extra["mime_type"] = mime_type
-        except Exception:
-            pass
+        if not extra.get("mime_type"):
+            try:
+                url_path = urlparse(uri).path
+                extra["mime_type"] = MimeTypes.get_mime_type(url_path)
+            except Exception:
+                pass
 
         registry = ResultRegistry(None, uri, extra)
         self.schema_assembler.add_resource_registry(registry)
         return registry
 
-    def _get_file_result(self, file: str):
-        result = ResourceResult()
-        result.add_file(file)
-        return result
-
     def add_resource(
         self,
         uri: str,
         result: ResourceResult = None,
-        file: Union[str, BinaryIO] = None,
         **extra,
     ):
         # For HTTP URIs, content is optional - they appear in list but not callable
         if uri.startswith(("http://", "https://")) and result is None:
             return self._add_http_resource(uri, extra)
-
-        if not file and not result:
-            raise ValueError("Either file or result must be provided for non-HTTP URIs")
-
-        if file:
-            result = self._get_file_result(file)
 
         # For non-HTTP URIs or when result is provided, result is required
         if not isinstance(result, ResourceResult):

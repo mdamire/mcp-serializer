@@ -23,9 +23,11 @@ class FileMetadata:
 
     file_name: str
     size: int
+    name: str
     mime_type: str
     data: Union[str, bytes]
     content_type: ContentTypes
+    uri: Optional[str] = None
 
 
 @dataclass

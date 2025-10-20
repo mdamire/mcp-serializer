@@ -137,3 +137,12 @@ class MimeTypes:
                 ".ts": cls.TYPESCRIPT,
             }
             return mapping
+
+    @classmethod
+    def get_mime_type(cls, file_name: str) -> str:
+        mime_type = cls.Text.from_file_name(file_name)
+        if not mime_type:
+            mime_type = cls.Image.from_file_name(file_name)
+        if not mime_type:
+            mime_type = cls.Audio.from_file_name(file_name)
+        return mime_type

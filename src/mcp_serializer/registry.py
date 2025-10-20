@@ -1,6 +1,9 @@
+from typing import Union, BinaryIO
+
+from .features.base.parsers import FileParser
 from .features.prompt.container import PromptsContainer
 from .features.resource.container import ResourceContainer
-from .features.resource.contents import ResourceContent
+from .features.resource.result import ResourceResult
 from .features.tool.container import ToolsContainer
 
 
@@ -27,47 +30,69 @@ class MCPRegistry:
 
     def resource(
         self,
-        uri,
-        name=None,
-        title=None,
-        description=None,
-        mime_type=None,
-        size=None,
+        uri: str,
         annotations=None,
+        **extra,
     ):
         def decorator(func):
             self._get_resource_container().register(
                 func,
                 uri,
-                name=name,
-                title=title,
-                description=description,
-                mime_type=mime_type,
-                size=size,
                 annotations=annotations,
+                **extra,
             )
             return func
 
         return decorator
 
-    def add_resource(
+    def add_file_resource(
         self,
-        uri,
-        content: ResourceContent=None,
-        name=None,
-        title=None,
-        description=None,
-        mime_type=None,
-        size=None,
-        annotations=None,
+        file: Union[str, BinaryIO],
+        uri: str = None,
+        title: str = None,
+        description: str = None,
+        annotations: dict = None,
     ):
+        file_metadata = FileParser(file).file_metadata
+        uri = uri or file_metadata.uri
+        if not uri:
+            raise ValueError(
+                "Could not determine URI for file. Provide uri as parameter."
+            )
+
+        result = ResourceResult()
+        result._add_file_metadata(file_metadata)
+
         return self._get_resource_container().add_resource(
-            uri,
-            content,
-            name=name,
+            result=result,
+            uri=uri,
+            name=file_metadata.name,
+            mime_type=file_metadata.mime_type,
+            size=file_metadata.size,
             title=title,
             description=description,
+            annotations=annotations,
+        )
+
+    def add_http_resource(
+        self,
+        uri: str,
+        name: str = None,
+        title: str = None,
+        description: str = None,
+        mime_type: str = None,
+        size: int = None,
+        annotations: dict = None,
+    ):
+        if not uri.startswith(("http://", "https://")):
+            raise ValueError("URI must start with http:// or https://")
+
+        return self._get_resource_container().add_resource(
+            uri=uri,
+            name=name,
             mime_type=mime_type,
+            title=title,
+            description=description,
             size=size,
             annotations=annotations,
         )

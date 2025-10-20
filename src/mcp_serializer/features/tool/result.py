@@ -111,9 +111,7 @@ class ToolsResult:
                     **content_kwargs,
                 )
             else:
-                raise ValueError(
-                    f"Unknown content type: {file_metadata.content_type}"
-                )
+                raise ValueError(f"Unknown content type: {file_metadata.content_type}")
         except ValueError as e:
             raise ValueError(
                 f"Unable to determine data or mime type from file '{file}'. "

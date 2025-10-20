@@ -221,20 +221,20 @@ class FileParser:
             FileMetadata with content_type set to 'text', 'image', or 'audio'
         """
         # Read file content
-        file_name, size, file_content = self._read_file(self.file)
+        file_name, size, file_content, uri = self._read_file(self.file)
 
         # Try as text content
-        metadata = self._try_as_text_content(file_name, size, file_content)
+        metadata = self._try_as_text_content(file_name, size, file_content, uri)
         if metadata:
             return metadata
 
         # Try as image content
-        metadata = self._try_as_image_content(file_name, size, file_content)
+        metadata = self._try_as_image_content(file_name, size, file_content, uri)
         if metadata:
             return metadata
 
         # Try as audio content
-        metadata = self._try_as_audio_content(file_name, size, file_content)
+        metadata = self._try_as_audio_content(file_name, size, file_content, uri)
         if metadata:
             return metadata
 
@@ -242,26 +242,32 @@ class FileParser:
             f"Cannot determine file type from MimeTypes for file: {file_name}"
         )
 
-    def _read_file(self, file: Union[str, BinaryIO]) -> tuple[str, int, bytes]:
-        """Read file and extract file name, size, and content.
+    def _read_file(self, file: Union[str, BinaryIO]) -> tuple[str, int, bytes, str]:
+        """Read file and extract file name, size, content, and URI.
 
-                Args:
-                    file: The file path (str) or file object (BinaryIO)
-        s
-                Returns:
-                    Tuple of (file_name, size, file_content)
+        Args:
+            file: The file path (str) or file object (BinaryIO)
+
+        Returns:
+            Tuple of (file_name, size, file_content, uri)
         """
         if isinstance(file, str):
             file_name = os.path.basename(file)
             size = os.path.getsize(file)
+            uri = f"file://{os.path.abspath(file)}"
             with open(file, "rb") as f:
                 file_content = f.read()
         else:
-            file_name = getattr(file, "name", "unknown")
-            if hasattr(file_name, "__fspath__"):  # Handle Path objects
-                file_name = os.path.basename(file_name.__fspath__())
-            elif isinstance(file_name, str):
-                file_name = os.path.basename(file_name)
+            file_path = getattr(file, "name", "unknown")
+            if hasattr(file_path, "__fspath__"):  # Handle Path objects
+                file_name = os.path.basename(file_path.__fspath__())
+                uri = f"file://{os.path.abspath(file_path.__fspath__())}"
+            elif isinstance(file_path, str) and file_path != "unknown":
+                file_name = os.path.basename(file_path)
+                uri = f"file://{os.path.abspath(file_path)}"
+            else:
+                file_name = "unknown"
+                uri = None
 
             # Get size and content
             current_pos = file.tell()
@@ -274,10 +280,10 @@ class FileParser:
             if isinstance(file_content, str):
                 file_content = file_content.encode("utf-8")
 
-        return file_name, size, file_content
+        return file_name, size, file_content, uri
 
     def _try_as_text_content(
-        self, file_name: str, size: int, file_content: bytes
+        self, file_name: str, size: int, file_content: bytes, uri: str
     ) -> Union[FileMetadata, None]:
         """Try to process file as text content.
 
@@ -285,6 +291,7 @@ class FileParser:
             file_name: Name of the file
             size: Size of the file in bytes
             file_content: Raw file content as bytes
+            uri: URI of the file
 
         Returns:
             FileMetadata if successful, None otherwise
@@ -298,9 +305,11 @@ class FileParser:
                 return FileMetadata(
                     file_name=file_name,
                     size=size,
+                    name=file_name,
                     mime_type=mime_type,
                     data=data,
                     content_type=ContentTypes.TEXT,
+                    uri=uri,
                 )
             except UnicodeDecodeError:
                 # If it can't be decoded as UTF-8, it's not text
@@ -308,7 +317,7 @@ class FileParser:
         return None
 
     def _try_as_image_content(
-        self, file_name: str, size: int, file_content: bytes
+        self, file_name: str, size: int, file_content: bytes, uri: str
     ) -> Union[FileMetadata, None]:
         """Try to process file as image content.
 
@@ -316,6 +325,7 @@ class FileParser:
             file_name: Name of the file
             size: Size of the file in bytes
             file_content: Raw file content as bytes
+            uri: URI of the file
 
         Returns:
             FileMetadata if successful, None otherwise
@@ -328,14 +338,16 @@ class FileParser:
             return FileMetadata(
                 file_name=file_name,
                 size=size,
+                name=file_name,
                 mime_type=mime_type,
                 data=data,
                 content_type=ContentTypes.IMAGE,
+                uri=uri,
             )
         return None
 
     def _try_as_audio_content(
-        self, file_name: str, size: int, file_content: bytes
+        self, file_name: str, size: int, file_content: bytes, uri: str
     ) -> Union[FileMetadata, None]:
         """Try to process file as audio content.
 
@@ -343,6 +355,7 @@ class FileParser:
             file_name: Name of the file
             size: Size of the file in bytes
             file_content: Raw file content as bytes
+            uri: URI of the file
 
         Returns:
             FileMetadata if successful, None otherwise
@@ -355,8 +368,10 @@ class FileParser:
             return FileMetadata(
                 file_name=file_name,
                 size=size,
+                name=file_name,
                 mime_type=mime_type,
                 data=data,
                 content_type=ContentTypes.AUDIO,
+                uri=uri,
             )
         return None

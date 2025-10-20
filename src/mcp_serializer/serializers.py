@@ -16,7 +16,9 @@ from . import errors
 class JsonRpcSerializer:
     """Serializer for JSON-RPC 2.0 requests."""
 
-    def __init__(self, initializer: Initializer, registry: MCPRegistry, page_size: int = 10):
+    def __init__(
+        self, initializer: Initializer, registry: MCPRegistry, page_size: int = 10
+    ):
         self.initializer = initializer
         self.registry = registry
         self.request_manager = RPCRequestManager(initializer, registry, page_size)

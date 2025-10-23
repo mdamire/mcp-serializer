@@ -82,9 +82,7 @@ class TestResourceContent:
             Path(temp_file_path).unlink()
 
     def test_add_file_process_error(self):
-        with pytest.raises(
-            Exception, match="No such file or directory"
-        ):
+        with pytest.raises(Exception, match="No such file or directory"):
             self.resource_content.add_file("nonexistent_file.unknown")
 
     def test_multiple_content_items(self):

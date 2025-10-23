@@ -119,7 +119,9 @@ class TestPromptsResult:
     @patch("mcp_serializer.features.prompt.result.FileParser")
     def test_add_file_all_fail(self, mock_file_parser):
         # Mock FileParser to raise ValueError
-        mock_file_parser.side_effect = ValueError("Cannot determine file type from MimeTypes")
+        mock_file_parser.side_effect = ValueError(
+            "Cannot determine file type from MimeTypes"
+        )
 
         with pytest.raises(ValueError, match="Unable to process file"):
             self.prompts_content.add_file("/path/to/unknown.file")

@@ -74,7 +74,7 @@ class ResourceResult:
         content_kwargs = {
             "uri": uri,
             "mime_type": file_metadata.mime_type,
-            "name": name or file_metadata.file_name,
+            "name": name or file_metadata.name,
             "title": title,
             "annotations": annotations,
         }
@@ -91,7 +91,7 @@ class ResourceResult:
             )
         else:
             raise self.FileProcessError(
-                f"Could not determine content type for file: {file_metadata.file_name}. "
+                f"Could not determine content type for file: {file_metadata.name}. "
                 "You can use add_text_content or add_binary_content to add content manually."
             )
 

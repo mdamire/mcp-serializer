@@ -9,8 +9,6 @@ from mcp_serializer.features.tool.schema import (
     ResourceLinkContent,
     EmbeddedResource,
 )
-from mcp_serializer.features.resource.result import ResourceResult
-from mcp_serializer.features.resource.container import ResourceContainer
 
 
 class SampleModel(BaseModel):
@@ -24,13 +22,12 @@ class TestToolsResult:
 
     def test_init(self):
         assert self.tools_content.content_list == []
-        assert self.tools_content.resource_container is None
         assert self.tools_content.structured_content is None
+        assert self.tools_content.is_error is False
 
-    def test_init_with_resource_container(self):
-        mock_container = Mock()
-        tools_content = ToolsResult(resource_container=mock_container)
-        assert tools_content.resource_container == mock_container
+    def test_init_with_is_error(self):
+        tools_content = ToolsResult(is_error=True)
+        assert tools_content.is_error is True
 
     def test_add_text_success(self):
         result = self.tools_content.add_text_content("Hello world")
@@ -75,12 +72,6 @@ class TestToolsResult:
         with pytest.raises(ValueError, match="Data must be a non-empty string"):
             self.tools_content.add_image_content("", "image/png")
 
-    def test_add_image_invalid_base64(self):
-        with pytest.raises(
-            ValueError, match="Data must be valid base64 encoded string"
-        ):
-            self.tools_content.add_image_content("invalid_base64!", "image/png")
-
     def test_add_audio_success(self):
         # Valid base64 audio data
         valid_base64 = "UklGRjIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ4AAAA="
@@ -96,22 +87,16 @@ class TestToolsResult:
         with pytest.raises(ValueError, match="Data must be a non-empty string"):
             self.tools_content.add_audio_content("", "audio/wav")
 
-    def test_add_audio_invalid_base64(self):
-        with pytest.raises(
-            ValueError, match="Data must be valid base64 encoded string"
-        ):
-            self.tools_content.add_audio_content("invalid_base64!", "audio/wav")
-
     @patch("mcp_serializer.features.tool.result.FileParser")
     def test_add_file_text_success(self, mock_file_parser):
         from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
 
         # Create mock FileMetadata
         mock_metadata = FileMetadata(
-            file_name="file.txt",
+            name="file.txt",
             size=100,
             mime_type="text/plain",
-            data="File content",
+            data=b"File content",
             content_type=ContentTypes.TEXT,
         )
 
@@ -120,26 +105,27 @@ class TestToolsResult:
         mock_parser_instance.file_metadata = mock_metadata
         mock_file_parser.return_value = mock_parser_instance
 
-        result = self.tools_content.add_file("/path/to/file.txt")
+        result = self.tools_content.add_file("/path/to/file.txt", uri="file://test.txt")
 
-        assert isinstance(result, TextContent)
-        assert result.text == "File content"
+        assert isinstance(result, EmbeddedResource)
+        assert result.resource.text == "File content"
 
     @patch("mcp_serializer.features.tool.result.FileParser")
     def test_add_file_image_success(self, mock_file_parser):
         from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
+        import base64
 
-        # Valid base64 image data
-        valid_base64 = (
+        # Valid binary image data
+        image_data = base64.b64decode(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGA"
         )
 
         # Create mock FileMetadata for image
         mock_metadata = FileMetadata(
-            file_name="image.png",
+            name="image.png",
             size=200,
             mime_type="image/png",
-            data=valid_base64,
+            data=image_data,
             content_type=ContentTypes.IMAGE,
         )
 
@@ -148,40 +134,57 @@ class TestToolsResult:
         mock_parser_instance.file_metadata = mock_metadata
         mock_file_parser.return_value = mock_parser_instance
 
-        result = self.tools_content.add_file("/path/to/image.png")
+        result = self.tools_content.add_file("/path/to/image.png", uri="file://image.png")
 
-        assert isinstance(result, ImageContent)
-        assert result.data == valid_base64
+        assert isinstance(result, EmbeddedResource)
+        assert result.resource.blob == base64.b64encode(image_data).decode("utf-8")
 
     @patch("mcp_serializer.features.tool.result.FileParser")
     def test_add_file_all_fail(self, mock_file_parser):
         # Mock FileParser to raise ValueError
-        mock_file_parser.side_effect = ValueError("Cannot determine file type from MimeTypes")
+        mock_file_parser.side_effect = ValueError(
+            "Cannot determine file type from MimeTypes"
+        )
 
         with pytest.raises(ValueError, match="Unable to determine data or mime type"):
             self.tools_content.add_file("/path/to/unknown.file")
 
-    def test_add_resource_link_without_container(self):
-        with pytest.raises(ToolsResult.ResourceContainerRequiredError):
-            self.tools_content.add_resource_link("/a/b/c", mime_type="text/html")
+    def test_add_resource_link_without_registry(self):
+        with pytest.raises(ValueError, match="registry is required for non-HTTP URIs"):
+            self.tools_content.add_resource_link("file://test.txt")
 
-    def test_add_resource_link_with_container_success(self):
-        # Create actual ResourceContainer and add a resource with content
-        resource_container = ResourceContainer()
-        resource_content = ResourceResult()
-        resource_content.add_text_content("Sample text content", "text/plain")
-
-        resource_container.add_resource(
-            "file://test.txt",
-            resource_content,
+    def test_add_resource_link_http_without_registry(self):
+        # HTTP URIs should work without registry
+        result = self.tools_content.add_resource_link(
+            "https://example.com/test.txt",
             name="Test Resource",
             description="A test resource",
-            mimeType="text/plain",
+            mime_type="text/plain"
         )
 
-        # Create ToolsResult with the actual resource container
-        tools_content = ToolsResult(resource_container=resource_container)
-        result = tools_content.add_resource_link("file://test.txt")
+        assert isinstance(result, ResourceLinkContent)
+        assert result.uri == "https://example.com/test.txt"
+        assert result.name == "Test Resource"
+        assert result.description == "A test resource"
+        assert result.mimeType == "text/plain"
+
+    def test_add_resource_link_with_registry_success(self):
+        # Create a mock registry with resource container
+        mock_registry = Mock()
+        mock_container = Mock()
+        mock_resource = Mock()
+        mock_resource.uri = "file://test.txt"
+        mock_resource.extra = {
+            "name": "Test Resource",
+            "description": "A test resource",
+            "mimeType": "text/plain",
+        }
+
+        mock_container.schema_assembler.resource_list = [mock_resource]
+        mock_container.schema_assembler.resource_template_list = []
+        mock_registry.resource_container = mock_container
+
+        result = self.tools_content.add_resource_link("file://test.txt", registry=mock_registry)
 
         assert isinstance(result, ResourceLinkContent)
         assert result.uri == "file://test.txt"
@@ -189,8 +192,8 @@ class TestToolsResult:
         assert result.description == "A test resource"
         assert result.mimeType == "text/plain"
 
-    def test_add_embedded_resource_no_container_no_data(self):
-        with pytest.raises(ToolsResult.ResourceContainerRequiredError):
+    def test_add_embedded_resource_no_data(self):
+        with pytest.raises(ValueError, match="Either 'text' or 'blob' must be provided"):
             self.tools_content.add_embedded_resource("https://example.com")
 
     def test_add_embedded_resource_with_text_data(self):
@@ -221,45 +224,19 @@ class TestToolsResult:
         assert result.resource.blob == valid_base64
         assert result.resource.mimeType == "image/png"
 
-    def test_add_embedded_resource_with_container(self):
-        mock_container = Mock()
-        mock_container.call.return_value = {
-            "contents": [
-                {
-                    "text": "Resource content",
-                    "mimeType": "text/plain",
-                    "name": "Test Resource",
-                }
-            ]
-        }
-
-        tools_content = ToolsResult(resource_container=mock_container)
-        result = tools_content.add_embedded_resource("file://test.txt")
+    def test_add_embedded_resource_with_title(self):
+        result = self.tools_content.add_embedded_resource(
+            "https://example.com",
+            text="Content with title",
+            mime_type="text/plain",
+            name="Resource Name",
+            title="Resource Title",
+        )
 
         assert isinstance(result, EmbeddedResource)
-        assert result.resource.text == "Resource content"
-        assert result.resource.name == "Test Resource"
-
-    def test_add_embedded_resource_container_fails_no_fallback(self):
-        mock_container = Mock()
-        mock_container.call.side_effect = Exception("Resource not found")
-
-        tools_content = ToolsResult(resource_container=mock_container)
-
-        with pytest.raises(ToolsResult.ResourceNotFoundError):
-            tools_content.add_embedded_resource("file://nonexistent.txt")
-
-    def test_add_embedded_resource_no_mime_type(self):
-        with pytest.raises(ValueError):
-            self.tools_content.add_embedded_resource(
-                "https://example.com", text="Content without mime type"
-            )
-
-    def test_add_embedded_resource_no_content(self):
-        with pytest.raises(ToolsResult.ResourceContainerRequiredError):
-            self.tools_content.add_embedded_resource(
-                "https://example.com", mime_type="text/plain"
-            )
+        assert result.resource.text == "Content with title"
+        assert result.resource.name == "Resource Name"
+        assert result.resource.title == "Resource Title"
 
     def test_add_structured_content_pydantic_model(self):
         model = SampleModel(name="test", value=42)

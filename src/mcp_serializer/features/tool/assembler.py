@@ -2,7 +2,7 @@ from typing import Optional
 from pydantic import BaseModel
 import inspect
 from ..base.pagination import Pagination
-from .schema import ToolsDefinitionSchema, ToolsListSchema, ResultSchema
+from .schema import ToolsDefinitionSchema, ToolsListSchema, ResultSchema, TextContent
 from ..base.assembler import FeatureSchemaAssembler
 from ..base.schema import JsonSchema, JsonSchemaTypes
 from .result import ToolsResult
@@ -113,6 +113,10 @@ class ToolsSchemaAssembler(FeatureSchemaAssembler):
                 result_schema.isError = result.is_error
         elif isinstance(result, BaseModel):
             result_schema.structuredContent = result.model_dump()
+        elif isinstance(result, dict):
+            result_schema.structuredContent = result
+        elif isinstance(result, str):
+            result_schema.content = [TextContent(text=result).model_dump()]
         else:
             raise self.UnsupportedResultTypeError(type(result))
         return self._build_non_none_dict(result_schema)

@@ -303,7 +303,6 @@ class FileParser:
             try:
                 data = file_content.decode("utf-8")
                 return FileMetadata(
-                    file_name=file_name,
                     size=size,
                     name=file_name,
                     mime_type=mime_type,

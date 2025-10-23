@@ -21,7 +21,6 @@ class ContentTypes:
 class FileMetadata:
     """Metadata for a file."""
 
-    file_name: str
     size: int
     name: str
     mime_type: str

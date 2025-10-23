@@ -178,4 +178,4 @@ class TestToolsSchemaAssembler:
 
     def test_process_result_unsupported_type(self):
         with pytest.raises(FeatureSchemaAssembler.UnsupportedResultTypeError):
-            self.assembler.process_result("invalid_content")
+            self.assembler.process_result(["invalid_content"])

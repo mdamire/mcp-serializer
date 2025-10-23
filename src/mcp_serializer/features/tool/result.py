@@ -77,7 +77,7 @@ class ToolsResult:
         except ValueError as e:
             raise ValueError(
                 f"Unable to determine data or mime type from file '{file}'. You can use add_text_content, "
-                "add_image_content, or add_audio_content ""methods to add content manually."
+                "add_image_content or add_audio_content methods to add content manually."
             ) from e
 
         if file_metadata.content_type == ContentTypes.TEXT:

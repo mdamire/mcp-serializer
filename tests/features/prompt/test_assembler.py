@@ -103,6 +103,33 @@ class TestPromptsSchemaAssembler:
         assert result["description"] == "Registry description"
         assert len(result["messages"]) == 1
 
+    def test_process_result_string(self):
+        def sample_prompt():
+            return "Simple text response"
+
+        metadata = FunctionParser(sample_prompt).function_metadata
+        registry = PromptRegistry(metadata, {"description": "Test prompt"})
+
+        result = self.assembler.process_result("Hello World", registry)
+
+        assert "description" in result
+        assert "messages" in result
+        assert len(result["messages"]) == 1
+        assert result["messages"][0]["role"] == "user"
+
+    def test_process_result_tuple(self):
+        def sample_prompt():
+            return ("Response text", "assistant")
+
+        metadata = FunctionParser(sample_prompt).function_metadata
+        registry = PromptRegistry(metadata, {"description": "Test prompt"})
+
+        result = self.assembler.process_result(("Hello", "user"), registry)
+
+        assert "messages" in result
+        assert len(result["messages"]) == 1
+        assert result["messages"][0]["role"] == "user"
+
     def test_process_result_unsupported_type(self):
         def sample_prompt():
             return PromptsResult()
@@ -110,5 +137,6 @@ class TestPromptsSchemaAssembler:
         metadata = FunctionParser(sample_prompt).function_metadata
         registry = PromptRegistry(metadata)
 
+        # Test with an actual unsupported type (integer)
         with pytest.raises(FeatureSchemaAssembler.UnsupportedResultTypeError):
-            self.assembler.process_result("invalid_content", registry)
+            self.assembler.process_result(12345, registry)

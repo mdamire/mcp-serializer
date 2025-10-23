@@ -134,7 +134,9 @@ class TestToolsResult:
         mock_parser_instance.file_metadata = mock_metadata
         mock_file_parser.return_value = mock_parser_instance
 
-        result = self.tools_content.add_file("/path/to/image.png", uri="file://image.png")
+        result = self.tools_content.add_file(
+            "/path/to/image.png", uri="file://image.png"
+        )
 
         assert isinstance(result, EmbeddedResource)
         assert result.resource.blob == base64.b64encode(image_data).decode("utf-8")
@@ -159,7 +161,7 @@ class TestToolsResult:
             "https://example.com/test.txt",
             name="Test Resource",
             description="A test resource",
-            mime_type="text/plain"
+            mime_type="text/plain",
         )
 
         assert isinstance(result, ResourceLinkContent)
@@ -184,7 +186,9 @@ class TestToolsResult:
         mock_container.schema_assembler.resource_template_list = []
         mock_registry.resource_container = mock_container
 
-        result = self.tools_content.add_resource_link("file://test.txt", registry=mock_registry)
+        result = self.tools_content.add_resource_link(
+            "file://test.txt", registry=mock_registry
+        )
 
         assert isinstance(result, ResourceLinkContent)
         assert result.uri == "file://test.txt"
@@ -193,7 +197,9 @@ class TestToolsResult:
         assert result.mimeType == "text/plain"
 
     def test_add_embedded_resource_no_data(self):
-        with pytest.raises(ValueError, match="Either 'text' or 'blob' must be provided"):
+        with pytest.raises(
+            ValueError, match="Either 'text' or 'blob' must be provided"
+        ):
             self.tools_content.add_embedded_resource("https://example.com")
 
     def test_add_embedded_resource_with_text_data(self):

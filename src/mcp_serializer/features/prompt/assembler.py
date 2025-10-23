@@ -64,9 +64,28 @@ class PromptsSchemaAssembler(FeatureSchemaAssembler):
             prompts=paginated_prompts, nextCursor=next_cursor
         ).model_dump()
 
+    def _check_tuple_result(self, result) -> bool:
+        return (
+            (isinstance(result, list) or isinstance(result, tuple))
+            and len(result) == 2
+            and isinstance(result[0], str)
+            and PromptsResult.Roles.has_value(result[1])
+        )
+
     def process_result(self, result: PromptsResult, registry):
         """Process the result from prompt function calls."""
-        if not isinstance(result, PromptsResult):
+        if isinstance(result, str):
+            prompts = PromptsResult()
+            prompts.add_text(result)
+            messages = prompts.messages
+        elif self._check_tuple_result(result):
+            text, role = result
+            prompts = PromptsResult()
+            prompts.add_text(text, role=role)
+            messages = prompts.messages
+        elif isinstance(result, PromptsResult):
+            messages = result.messages
+        else:
             raise self.UnsupportedResultTypeError(
                 f"Unsupported result type: {type(result)}"
             )
@@ -74,6 +93,6 @@ class PromptsSchemaAssembler(FeatureSchemaAssembler):
         result_schema = PromptResultSchema(
             description=registry.extra.get("description")
             or registry.metadata.description,
-            messages=result.messages,
+            messages=messages,
         )
         return result_schema.model_dump()

@@ -19,7 +19,7 @@ class TestPromptsResult:
     def test_init_and_roles_enum(self):
         # Test default initialization
         assert self.prompts_content.messages == []
-        assert self.prompts_content.default_role == PromptsResult.Roles.ASSISTANT
+        assert self.prompts_content.default_role == PromptsResult.Roles.USER
         assert self.prompts_content.resource_container is None
 
         # Test Roles enum
@@ -43,7 +43,7 @@ class TestPromptsResult:
         # Test with default role
         result2 = self.prompts_content.add_text("Hi there!")
         assert len(self.prompts_content.messages) == 2
-        assert self.prompts_content.messages[1]["role"] == "assistant"
+        assert self.prompts_content.messages[1]["role"] == "user"
 
     def test_add_text_validation(self):
         with pytest.raises(ValueError, match="Text must be a non-empty string"):
@@ -96,11 +96,12 @@ class TestPromptsResult:
 
         # Create mock FileMetadata
         mock_metadata = FileMetadata(
-            file_name="file.txt",
+            name="file.txt",
             size=100,
             mime_type="text/plain",
-            data="File content",
+            data=b"File content",
             content_type=ContentTypes.TEXT,
+            uri="file://file.txt",
         )
 
         # Mock FileParser to return the metadata
@@ -112,8 +113,8 @@ class TestPromptsResult:
             "/path/to/file.txt", role=PromptsResult.Roles.USER
         )
 
-        assert isinstance(result, TextContent)
-        assert result.text == "File content"
+        assert isinstance(result, EmbeddedResource)
+        assert result.resource.text == "File content"
         assert self.prompts_content.messages[0]["role"] == "user"
 
     @patch("mcp_serializer.features.prompt.result.FileParser")

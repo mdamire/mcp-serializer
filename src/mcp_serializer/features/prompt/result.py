@@ -1,3 +1,7 @@
+import base64
+from typing import Optional, Dict, Any, List, Union
+from enum import Enum
+
 from ..base.parsers import FileParser
 from ..base.definitions import ContentTypes
 from .schema import (
@@ -8,8 +12,6 @@ from .schema import (
     PromptMessageSchema,
 )
 from ..resource.schema import TextContentSchema, BinaryContentSchema
-from typing import Optional, Dict, Any, List, Union
-from enum import Enum
 
 
 class PromptsResult:
@@ -33,7 +35,7 @@ class PromptsResult:
         resource_container=None,
     ):
         self.messages = []
-        self.default_role = role or self.Roles.ASSISTANT
+        self.default_role = role or self.Roles.USER
         self.resource_container = resource_container
 
     def _add_message(
@@ -111,54 +113,45 @@ class PromptsResult:
     def add_file(
         self,
         file: str,
+        uri: Optional[str] = None,
         role: Optional[Roles] = None,
+        mime_type: Optional[str] = None,
+        name: Optional[str] = None,
+        title: Optional[str] = None,
         annotations: Optional[Dict[str, Any]] = None,
-    ) -> Union[TextContent, ImageContent, AudioContent]:
-        """Add content from file as a message - automatically detects if it's text, image, or audio.
+    ) -> EmbeddedResource:
+        """Add file content as an embedded resource by automatically determining its type."""
 
-        Args:
-            file: File path or file object
-            role: Optional role for the message
-            annotations: Optional annotations
-
-        Returns:
-            TextContent, ImageContent, or AudioContent
-
-        Raises:
-            ValueError: If file type cannot be determined
-        """
         try:
             file_metadata = FileParser(file).file_metadata
-
-            content_kwargs = {
-                "role": role,
-                "annotations": annotations,
-            }
-
-            if file_metadata.content_type == ContentTypes.TEXT:
-                return self.add_text(
-                    text=file_metadata.data,
-                    **content_kwargs,
-                )
-            elif file_metadata.content_type == ContentTypes.IMAGE:
-                return self.add_image(
-                    data=file_metadata.data,
-                    mime_type=file_metadata.mime_type,
-                    **content_kwargs,
-                )
-            elif file_metadata.content_type == ContentTypes.AUDIO:
-                return self.add_audio(
-                    data=file_metadata.data,
-                    mime_type=file_metadata.mime_type,
-                    **content_kwargs,
-                )
-            else:
-                raise ValueError(f"Unknown content type: {file_metadata.content_type}")
         except ValueError as e:
             raise ValueError(
                 f"Unable to process file '{file}'. Could not determine mime type or data. "
                 "You can use add_text, add_image, or add_audio methods to add content manually."
             ) from e
+
+        content_kwargs = {
+            "role": role,
+            "uri": uri or file_metadata.uri,
+            "mime_type": mime_type or file_metadata.mime_type,
+            "name": name or file_metadata.name,
+            "title": title,
+            "annotations": annotations,
+        }
+
+        if file_metadata.content_type == ContentTypes.TEXT:
+            text = file_metadata.data.decode("utf-8")
+            blob = None
+        else:
+            text = None
+            blob = base64.b64encode(file_metadata.data).decode("utf-8")
+
+        embedded_resource = self.add_embedded_resource(
+            text=text,
+            blob=blob,
+            **content_kwargs,
+        )
+        return embedded_resource
 
     def add_embedded_resource(
         self,

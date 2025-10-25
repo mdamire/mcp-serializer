@@ -61,13 +61,14 @@ class PromptsResult:
         self,
         text: str,
         role: Optional[Roles] = None,
+        mime_type: Optional[str] = None,
         annotations: Optional[Dict[str, Any]] = None,
     ) -> TextContent:
         """Add text content as a message."""
         if not text or not isinstance(text, str):
             raise ValueError("Text must be a non-empty string")
 
-        text_content = TextContent(text=text, annotations=annotations)
+        text_content = TextContent(text=text, mimeType=mime_type, annotations=annotations)
         self._add_message(role, text_content)
 
         return text_content
@@ -130,7 +131,12 @@ class PromptsResult:
 
         if content_type == ContentTypes.TEXT:
             text = file_metadata.data.decode("utf-8")
-            return self.add_text(text=text, role=role, annotations=annotations)
+            return self.add_text(
+                text=text,
+                role=role,
+                mime_type=file_metadata.mime_type,
+                annotations=annotations,
+            )
         elif content_type == ContentTypes.IMAGE:
             data = base64.b64encode(file_metadata.data).decode("utf-8")
             return self.add_image(

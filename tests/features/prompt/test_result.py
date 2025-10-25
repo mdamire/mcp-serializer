@@ -52,6 +52,20 @@ class TestPromptsResult:
         with pytest.raises(ValueError, match="Text must be a non-empty string"):
             self.prompts_content.add_text(123)
 
+    def test_add_text_with_mime_type(self):
+        # Test with mime type
+        result = self.prompts_content.add_text(
+            "Sample text", role=PromptsResult.Roles.USER, mime_type="text/plain"
+        )
+        assert isinstance(result, TextContent)
+        assert result.text == "Sample text"
+        assert result.mimeType == "text/plain"
+        assert self.prompts_content.messages[0]["content"]["mimeType"] == "text/plain"
+
+        # Test without mime type (should be None)
+        result2 = self.prompts_content.add_text("Another text")
+        assert result2.mimeType is None
+
     def test_add_image_and_audio(self):
         valid_base64 = (
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGA"
@@ -152,8 +166,10 @@ class TestPromptsResult:
 
         assert isinstance(result, TextContent)
         assert result.text == "Text file content"
+        assert result.mimeType == "text/plain"
         assert self.prompts_content.messages[0]["role"] == "user"
         assert self.prompts_content.messages[0]["content"]["type"] == "text"
+        assert self.prompts_content.messages[0]["content"]["mimeType"] == "text/plain"
 
     @patch("mcp_serializer.features.prompt.result.FileParser")
     def test_add_file_message_image(self, mock_file_parser):

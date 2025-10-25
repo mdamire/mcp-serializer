@@ -27,6 +27,7 @@ class PromptsListSchema(BaseModel):
 class TextContent(BaseModel):
     type: str = "text"
     text: str
+    mimeType: Optional[str] = None
     annotations: Optional[Dict[str, Any]] = None
 
 

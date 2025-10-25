@@ -13,6 +13,7 @@ from .logging import get_logger
 from .initializer import Initializer
 from . import errors
 from .features.base.container import FeatureContainer
+from .features.base.assembler import FeatureSchemaAssembler
 
 
 class RPCRequestManager:
@@ -128,6 +129,10 @@ class RPCRequestManager:
                     data["missing_parameter"] = e.param_name
                     error = errors.RPCServerError(
                         -32005, "Parameter is required in resource template", data
+                    )
+                elif isinstance(e, FeatureSchemaAssembler.UnsupportedResultTypeError):
+                    error = errors.InternalError(
+                        e, "Feature returned unsupported type. Check return values."
                     )
                 else:
                     raise e

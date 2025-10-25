@@ -110,7 +110,50 @@ class PromptsResult:
         self._add_message(role, audio_content)
         return audio_content
 
-    def add_file(
+    def add_file_message(
+        self,
+        file: str,
+        role: Optional[Roles] = None,
+        annotations: Optional[Dict[str, Any]] = None,
+    ) -> Union[TextContent, ImageContent, AudioContent]:
+        """Add file content as a message (text, image, or audio) by automatically determining its type."""
+
+        try:
+            file_metadata = FileParser(file).file_metadata
+        except ValueError as e:
+            raise ValueError(
+                f"Unable to process file '{file}'. Could not determine mime type or data. "
+                "You can use add_text, add_image, or add_audio methods to add content manually."
+            ) from e
+
+        content_type = file_metadata.content_type
+
+        if content_type == ContentTypes.TEXT:
+            text = file_metadata.data.decode("utf-8")
+            return self.add_text(text=text, role=role, annotations=annotations)
+        elif content_type == ContentTypes.IMAGE:
+            data = base64.b64encode(file_metadata.data).decode("utf-8")
+            return self.add_image(
+                data=data,
+                mime_type=file_metadata.mime_type,
+                role=role,
+                annotations=annotations,
+            )
+        elif content_type == ContentTypes.AUDIO:
+            data = base64.b64encode(file_metadata.data).decode("utf-8")
+            return self.add_audio(
+                data=data,
+                mime_type=file_metadata.mime_type,
+                role=role,
+                annotations=annotations,
+            )
+        else:
+            raise ValueError(
+                f"Unsupported content type '{content_type}' for file '{file}'. "
+                "Use add_file_resource to add files as embedded resources."
+            )
+
+    def add_file_resource(
         self,
         file: str,
         uri: Optional[str] = None,

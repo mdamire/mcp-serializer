@@ -48,9 +48,9 @@ class InvalidParams(RPCError):
 
 
 class InternalError(RPCError):
-    def __init__(self, error: Exception):
+    def __init__(self, error: Exception, message: str = "Internal error"):
         data = self._build_error_data(error)
-        super().__init__(-32603, "Internal error", data)
+        super().__init__(-32603, message, data)
 
 
 class ParseError(RPCError):

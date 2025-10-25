@@ -91,7 +91,7 @@ class TestPromptsResult:
             self.prompts_content.add_audio("valid_data", "")
 
     @patch("mcp_serializer.features.prompt.result.FileParser")
-    def test_add_file_text_success(self, mock_file_parser):
+    def test_add_file_resource_text_success(self, mock_file_parser):
         from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
 
         # Create mock FileMetadata
@@ -109,7 +109,7 @@ class TestPromptsResult:
         mock_parser_instance.file_metadata = mock_metadata
         mock_file_parser.return_value = mock_parser_instance
 
-        result = self.prompts_content.add_file(
+        result = self.prompts_content.add_file_resource(
             "/path/to/file.txt", role=PromptsResult.Roles.USER
         )
 
@@ -118,14 +118,138 @@ class TestPromptsResult:
         assert self.prompts_content.messages[0]["role"] == "user"
 
     @patch("mcp_serializer.features.prompt.result.FileParser")
-    def test_add_file_all_fail(self, mock_file_parser):
+    def test_add_file_resource_all_fail(self, mock_file_parser):
         # Mock FileParser to raise ValueError
         mock_file_parser.side_effect = ValueError(
             "Cannot determine file type from MimeTypes"
         )
 
         with pytest.raises(ValueError, match="Unable to process file"):
-            self.prompts_content.add_file("/path/to/unknown.file")
+            self.prompts_content.add_file_resource("/path/to/unknown.file")
+
+    @patch("mcp_serializer.features.prompt.result.FileParser")
+    def test_add_file_message_text(self, mock_file_parser):
+        from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
+
+        # Create mock FileMetadata for text file
+        mock_metadata = FileMetadata(
+            name="file.txt",
+            size=100,
+            mime_type="text/plain",
+            data=b"Text file content",
+            content_type=ContentTypes.TEXT,
+            uri="file://file.txt",
+        )
+
+        # Mock FileParser to return the metadata
+        mock_parser_instance = Mock()
+        mock_parser_instance.file_metadata = mock_metadata
+        mock_file_parser.return_value = mock_parser_instance
+
+        result = self.prompts_content.add_file_message(
+            "/path/to/file.txt", role=PromptsResult.Roles.USER
+        )
+
+        assert isinstance(result, TextContent)
+        assert result.text == "Text file content"
+        assert self.prompts_content.messages[0]["role"] == "user"
+        assert self.prompts_content.messages[0]["content"]["type"] == "text"
+
+    @patch("mcp_serializer.features.prompt.result.FileParser")
+    def test_add_file_message_image(self, mock_file_parser):
+        from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
+
+        # Create mock FileMetadata for image file
+        mock_metadata = FileMetadata(
+            name="image.png",
+            size=200,
+            mime_type="image/png",
+            data=b"fake_image_data",
+            content_type=ContentTypes.IMAGE,
+            uri="file://image.png",
+        )
+
+        # Mock FileParser to return the metadata
+        mock_parser_instance = Mock()
+        mock_parser_instance.file_metadata = mock_metadata
+        mock_file_parser.return_value = mock_parser_instance
+
+        result = self.prompts_content.add_file_message(
+            "/path/to/image.png", role=PromptsResult.Roles.USER
+        )
+
+        assert isinstance(result, ImageContent)
+        assert result.mimeType == "image/png"
+        # Data should be base64 encoded
+        import base64
+
+        assert result.data == base64.b64encode(b"fake_image_data").decode("utf-8")
+        assert self.prompts_content.messages[0]["role"] == "user"
+        assert self.prompts_content.messages[0]["content"]["type"] == "image"
+
+    @patch("mcp_serializer.features.prompt.result.FileParser")
+    def test_add_file_message_audio(self, mock_file_parser):
+        from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
+
+        # Create mock FileMetadata for audio file
+        mock_metadata = FileMetadata(
+            name="audio.wav",
+            size=300,
+            mime_type="audio/wav",
+            data=b"fake_audio_data",
+            content_type=ContentTypes.AUDIO,
+            uri="file://audio.wav",
+        )
+
+        # Mock FileParser to return the metadata
+        mock_parser_instance = Mock()
+        mock_parser_instance.file_metadata = mock_metadata
+        mock_file_parser.return_value = mock_parser_instance
+
+        result = self.prompts_content.add_file_message(
+            "/path/to/audio.wav", role=PromptsResult.Roles.ASSISTANT
+        )
+
+        assert isinstance(result, AudioContent)
+        assert result.mimeType == "audio/wav"
+        # Data should be base64 encoded
+        import base64
+
+        assert result.data == base64.b64encode(b"fake_audio_data").decode("utf-8")
+        assert self.prompts_content.messages[0]["role"] == "assistant"
+        assert self.prompts_content.messages[0]["content"]["type"] == "audio"
+
+    @patch("mcp_serializer.features.prompt.result.FileParser")
+    def test_add_file_message_unsupported_mime_type(self, mock_file_parser):
+        from mcp_serializer.features.base.definitions import FileMetadata
+
+        # Create mock FileMetadata for unsupported file type
+        mock_metadata = FileMetadata(
+            name="document.pdf",
+            size=400,
+            mime_type="application/pdf",
+            data=b"fake_pdf_data",
+            content_type="application",
+            uri="file://document.pdf",
+        )
+
+        # Mock FileParser to return the metadata
+        mock_parser_instance = Mock()
+        mock_parser_instance.file_metadata = mock_metadata
+        mock_file_parser.return_value = mock_parser_instance
+
+        with pytest.raises(ValueError, match="Unsupported content type"):
+            self.prompts_content.add_file_message("/path/to/document.pdf")
+
+    @patch("mcp_serializer.features.prompt.result.FileParser")
+    def test_add_file_message_parser_failure(self, mock_file_parser):
+        # Mock FileParser to raise ValueError
+        mock_file_parser.side_effect = ValueError(
+            "Cannot determine file type from MimeTypes"
+        )
+
+        with pytest.raises(ValueError, match="Unable to process file"):
+            self.prompts_content.add_file_message("/path/to/unknown.file")
 
     def test_add_embedded_resource_with_data(self):
         result = self.prompts_content.add_embedded_resource(

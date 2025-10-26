@@ -3,6 +3,7 @@ from typing import Union, BinaryIO
 from .features.base.parsers import FileParser
 from .features.prompt.container import PromptsContainer
 from .features.resource.container import ResourceContainer
+from .features.prompt.result import PromptsResult
 from .features.resource.result import ResourceResult
 from .features.tool.container import ToolsContainer
 
@@ -105,6 +106,44 @@ class MCPRegistry:
             return func
 
         return decorator
+
+    def add_text_prompt(
+        self,
+        name: str,
+        text: str,
+        role: str = None,
+        mime_type: str = None,
+        title: str = None,
+        description: str = None,
+    ):
+        """Add a text-based prompt with static content."""
+        prompt = self._get_prompt_container().add_text_prompt(
+            name=name,
+            text=text,
+            role=role,
+            mime_type=mime_type,
+            title=title,
+            description=description,
+        )
+        return prompt
+
+    def add_file_prompt(
+        self,
+        name: str,
+        file: Union[str, BinaryIO],
+        role: str = None,
+        title: str = None,
+        description: str = None,
+    ):
+        """Add a file-based prompt by automatically determining its type."""
+        prompt = self._get_prompt_container().add_file_prompt(
+            name=name,
+            file=file,
+            role=role,
+            title=title,
+            description=description,
+        )
+        return prompt
 
     def tool(self, name=None, title=None, description=None, annotations=None):
         def decorator(func):

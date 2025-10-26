@@ -17,18 +17,27 @@ class PromptsSchemaAssembler(FeatureSchemaAssembler):
         self.prompts_list = []
 
     def add_registry(self, registry):
-        metadata = registry.metadata
+        from .container import PromptRegistry, ResultRegistry
 
-        # Create arguments schema from function parameters
-        arguments_schema = self._create_arguments_schema(metadata)
+        if isinstance(registry, PromptRegistry):
+            metadata = registry.metadata
+            arguments_schema = self._create_arguments_schema(metadata)
 
-        # Build definition schema
-        definition_schema = PromptDefinitionSchema(
-            name=registry.extra.get("name") or metadata.name,
-            title=registry.extra.get("title") or metadata.title,
-            description=registry.extra.get("description") or metadata.description,
-            arguments=arguments_schema,
-        )
+            definition_schema = PromptDefinitionSchema(
+                name=registry.extra.get("name") or metadata.name,
+                title=registry.extra.get("title") or metadata.title,
+                description=registry.extra.get("description") or metadata.description,
+                arguments=arguments_schema,
+            )
+        elif isinstance(registry, ResultRegistry):
+            definition_schema = PromptDefinitionSchema(
+                name=registry.name,
+                title=registry.extra.get("title"),
+                description=registry.extra.get("description"),
+                arguments=None,
+            )
+        else:
+            raise ValueError(f"Unsupported registry type: {type(registry)}")
 
         # Convert to dict and add to prompts list
         self._append_sorted_list(
@@ -74,6 +83,8 @@ class PromptsSchemaAssembler(FeatureSchemaAssembler):
 
     def process_result(self, result: PromptsResult, registry):
         """Process the result from prompt function calls."""
+        from .container import PromptRegistry, ResultRegistry
+
         if isinstance(result, str):
             prompts = PromptsResult()
             prompts.add_text(result)
@@ -90,9 +101,18 @@ class PromptsSchemaAssembler(FeatureSchemaAssembler):
                 f"Unsupported result type: {type(result)}"
             )
 
+        # Get description based on registry type
+        if isinstance(registry, PromptRegistry):
+            description = (
+                registry.extra.get("description") or registry.metadata.description
+            )
+        elif isinstance(registry, ResultRegistry):
+            description = registry.extra.get("description")
+        else:
+            description = None
+
         result_schema = PromptResultSchema(
-            description=registry.extra.get("description")
-            or registry.metadata.description,
+            description=description,
             messages=messages,
         )
         return result_schema.model_dump()

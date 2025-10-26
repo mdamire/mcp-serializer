@@ -68,7 +68,9 @@ class PromptsResult:
         if not text or not isinstance(text, str):
             raise ValueError("Text must be a non-empty string")
 
-        text_content = TextContent(text=text, mimeType=mime_type, annotations=annotations)
+        text_content = TextContent(
+            text=text, mimeType=mime_type, annotations=annotations
+        )
         self._add_message(role, text_content)
 
         return text_content

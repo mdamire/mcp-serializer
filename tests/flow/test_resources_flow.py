@@ -4,67 +4,15 @@ This test demonstrates the complete workflow for resource registration and acces
 """
 
 import json
+import tempfile
+import os
 from mcp_serializer.registry import MCPRegistry
 from mcp_serializer.initializer import Initializer
-from mcp_serializer.serializers import JsonRpcSerializer
+from mcp_serializer.serializers import MCPSerializer
 from mcp_serializer.features.resource.result import ResourceResult
 
 # Initialize registry at module level
 registry = MCPRegistry()
-
-# ============================================================================
-# As in Documentation
-# ============================================================================
-
-registry.add_file_resource(
-    file="file.txt", title="File Title", description="File Description", annotations={}
-)
-registry.add_http_resource(
-    uri="https://example.com/api/data",
-    name="api_data",
-    mime_type="application/json",
-    size=100,
-    title="API data",
-    description="API data",
-    annotations={},
-)
-
-
-# for more complex cases you can return a ResourceResult object
-@registry.resource(uri="file:///file.txt", annotations={})
-def get_file():
-    result = ResourceResult()
-
-    # multiple files
-    result.add_file("file1.txt", uri="file:///file1.txt", annotations={})
-    result.add_file("file2.txt", annotations={})
-
-    # mannual text content
-    result.add_text_content("abc", mime_type="text/plain", annotations={})
-
-    # mannual binary content
-    result.add_binary_content("aGVsbG8=", mime_type="image/png", annotations={})
-
-    return result
-
-
-# if the function takes parameters, it becomes a resource template
-@registry.resource(
-    uri="resource/config/",
-    name="config",
-    title="Config Title",
-    description="Config Description",
-    annotations={},
-)
-def get_config(config_name: str):
-    """
-    Get config
-    tool
-
-    Get configuration file content."""
-    result = ResourceResult()
-    result.add_text_content(f"# Config: {config_name}\nkey=value", "text/plain")
-    return result
 
 
 # ============================================================================
@@ -80,7 +28,7 @@ def get_config(config_name: str):
     tool
 
     Get configuration file content."""
-    content = ResourceContent()
+    content = ResourceResult()
     content.add_text_content(f"# Config: {config_name}\nkey=value", "text/plain")
     return content
 
@@ -92,7 +40,7 @@ def get_settings(setting_name: str, setting_type):
     Get settings tool
 
     Get settings file content."""
-    content = ResourceContent()
+    content = ResourceResult()
     content.add_text_content(
         f"# Settings: {setting_name}\nkey=value\ntype={setting_type}", "text/plain"
     )
@@ -102,40 +50,42 @@ def get_settings(setting_name: str, setting_type):
 # resource
 @registry.resource(uri="file:///style")
 def get_style():
-    content = ResourceContent()
+    content = ResourceResult()
     content.add_text_content("body { background-color: #f0f0f0; }", "text/css")
     return content
 
 
-# resource
-readme_content = ResourceContent()
+# resource - using container directly
+readme_content = ResourceResult()
 readme_content.add_text_content(
     "# MCP Serializer\nA library for MCP protocol serialization.", "text/markdown"
 )
-registry.add_resource(
+registry._get_resource_container().add_resource(
     uri="file:///README.md",
-    content=readme_content,
+    result=readme_content,
     name="readme",
     description="Project README file",
 )
 
 # resource
-api_docs_content = ResourceContent()
-api_docs_content.add_text_content(
-    json.dumps({"version": "1.0", "endpoints": ["/api/v1/tools", "/api/v1/resources"]}),
-    "application/json",
-)
-registry.add_resource(
-    uri="file:///api-docs.json",
-    content=api_docs_content,
-    name="api_docs",
-    description="API documentation",
-)
-
-# resource
-registry.add_resource(
+registry.add_http_resource(
     uri="https://example.com/api/data",
     name="api_data",
+)
+
+# resource from file
+# Create a temporary JSON file for testing
+temp_file = tempfile.NamedTemporaryFile(
+    mode="w", suffix=".json", delete=False, dir=tempfile.gettempdir()
+)
+temp_file.write(json.dumps({"test": "data", "version": "1.0"}))
+temp_file_path = temp_file.name
+temp_file.close()
+
+registry.add_file_resource(
+    file=temp_file_path,
+    title="Test JSON File",
+    description="A test JSON file resource",
 )
 
 
@@ -159,7 +109,7 @@ initializer.add_server_info(
 initializer.add_resources(subscribe=False, list_changed=False)
 
 # Create serializer
-serializer = JsonRpcSerializer(initializer, registry)
+serializer = MCPSerializer(initializer, registry)
 
 
 # ============================================================================
@@ -204,17 +154,20 @@ def test_resources_list_request():
     assert response["id"] == 5
     assert "result" in response
     assert "resources" in response["result"]
-    assert len(response["result"]["resources"]) == 3  # README and api-docs
+    assert (
+        len(response["result"]["resources"]) == 4
+    )  # README, api_data, get_style and temp file
 
     resource_names = [res["name"] for res in response["result"]["resources"]]
     assert "readme" in resource_names
-    assert "api_docs" in resource_names
     assert "api_data" in resource_names
+    assert "get_style" in resource_names
 
     resource_urls = [res["uri"] for res in response["result"]["resources"]]
     assert "file:///README.md" in resource_urls
-    assert "file:///api-docs.json" in resource_urls
     assert "https://example.com/api/data" in resource_urls
+    # Temp file URI will be file://<temp_path>
+    assert any("file://" in uri and ".json" in uri for uri in resource_urls)
 
 
 def test_resource_template_list_request():
@@ -264,7 +217,7 @@ def test_resources_read_request():
         "jsonrpc": "2.0",
         "id": 7,
         "method": "resources/read",
-        "params": {"uri": "file:///config/app"},
+        "params": {"uri": "resource/config/app"},
     }
 
     response = serializer.process_request(request)
@@ -272,6 +225,37 @@ def test_resources_read_request():
     assert response is not None
     assert "result" in response
     assert "Config: app" in str(response["result"])
+
+
+def test_file_resource():
+    """Test reading a file-based resource."""
+    # Get the URI for the temp file from the registry
+    resource_list = serializer.registry.resource_container.schema_assembler.resource_list
+    temp_resource = None
+    for resource in resource_list:
+        if resource.uri.startswith("file://") and ".json" in resource.uri:
+            if "README" not in resource.uri and "api-docs" not in resource.uri:
+                temp_resource = resource
+                break
+
+    assert temp_resource is not None
+
+    request = {
+        "jsonrpc": "2.0",
+        "id": 15,
+        "method": "resources/read",
+        "params": {"uri": temp_resource.uri},
+    }
+
+    response = serializer.process_request(request)
+
+    assert response is not None
+    assert "result" in response
+    assert "contents" in response["result"]
+    assert len(response["result"]["contents"]) == 1
+    content = response["result"]["contents"][0]
+    assert content["mimeType"] == "application/json"
+    assert '"test": "data"' in content["text"]
 
 
 def test_batch_request():
@@ -292,3 +276,10 @@ def test_batch_request():
     assert isinstance(responses, list)
     assert len(responses) == 2
     assert all("result" in resp for resp in responses)
+
+
+def test_cleanup():
+    """Clean up temporary files."""
+    # Clean up the temp file
+    if os.path.exists(temp_file_path):
+        os.unlink(temp_file_path)

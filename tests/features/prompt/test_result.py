@@ -1,3 +1,4 @@
+import base64
 import pytest
 from unittest.mock import Mock, patch
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ from mcp_serializer.features.prompt.schema import (
 )
 from mcp_serializer.features.resource.container import ResourceContainer
 from mcp_serializer.features.resource.result import ResourceResult
+from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
 
 
 class TestPromptsResult:
@@ -19,7 +21,7 @@ class TestPromptsResult:
     def test_init_and_roles_enum(self):
         # Test default initialization
         assert self.prompts_content.messages == []
-        assert self.prompts_content.default_role == PromptsResult.Roles.USER
+        assert self.prompts_content.default_role == PromptsResult.Roles.USER.value
         assert self.prompts_content.resource_container is None
 
         # Test Roles enum
@@ -30,7 +32,7 @@ class TestPromptsResult:
 
         # Test with custom role
         custom_prompts = PromptsResult(role=PromptsResult.Roles.USER)
-        assert custom_prompts.default_role == PromptsResult.Roles.USER
+        assert custom_prompts.default_role == PromptsResult.Roles.USER.value
 
     def test_add_text_with_roles(self):
         # Test with explicit role
@@ -106,14 +108,12 @@ class TestPromptsResult:
 
     @patch("mcp_serializer.features.prompt.result.FileParser")
     def test_add_file_resource_text_success(self, mock_file_parser):
-        from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
-
         # Create mock FileMetadata
         mock_metadata = FileMetadata(
             name="file.txt",
             size=100,
             mime_type="text/plain",
-            data=b"File content",
+            data="File content",
             content_type=ContentTypes.TEXT,
             uri="file://file.txt",
         )
@@ -143,14 +143,12 @@ class TestPromptsResult:
 
     @patch("mcp_serializer.features.prompt.result.FileParser")
     def test_add_file_message_text(self, mock_file_parser):
-        from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
-
         # Create mock FileMetadata for text file
         mock_metadata = FileMetadata(
             name="file.txt",
             size=100,
             mime_type="text/plain",
-            data=b"Text file content",
+            data="Text file content",
             content_type=ContentTypes.TEXT,
             uri="file://file.txt",
         )
@@ -173,14 +171,12 @@ class TestPromptsResult:
 
     @patch("mcp_serializer.features.prompt.result.FileParser")
     def test_add_file_message_image(self, mock_file_parser):
-        from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
-
         # Create mock FileMetadata for image file
         mock_metadata = FileMetadata(
             name="image.png",
             size=200,
             mime_type="image/png",
-            data=b"fake_image_data",
+            data=base64.b64encode(b"fake_image_data").decode("utf-8"),
             content_type=ContentTypes.IMAGE,
             uri="file://image.png",
         )
@@ -196,8 +192,6 @@ class TestPromptsResult:
 
         assert isinstance(result, ImageContent)
         assert result.mimeType == "image/png"
-        # Data should be base64 encoded
-        import base64
 
         assert result.data == base64.b64encode(b"fake_image_data").decode("utf-8")
         assert self.prompts_content.messages[0]["role"] == "user"
@@ -205,14 +199,13 @@ class TestPromptsResult:
 
     @patch("mcp_serializer.features.prompt.result.FileParser")
     def test_add_file_message_audio(self, mock_file_parser):
-        from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
-
         # Create mock FileMetadata for audio file
+        data = base64.b64encode(b"fake_audio_data").decode("utf-8")
         mock_metadata = FileMetadata(
             name="audio.wav",
             size=300,
             mime_type="audio/wav",
-            data=b"fake_audio_data",
+            data=data,
             content_type=ContentTypes.AUDIO,
             uri="file://audio.wav",
         )
@@ -228,23 +221,18 @@ class TestPromptsResult:
 
         assert isinstance(result, AudioContent)
         assert result.mimeType == "audio/wav"
-        # Data should be base64 encoded
-        import base64
-
-        assert result.data == base64.b64encode(b"fake_audio_data").decode("utf-8")
+        assert result.data == data
         assert self.prompts_content.messages[0]["role"] == "assistant"
         assert self.prompts_content.messages[0]["content"]["type"] == "audio"
 
     @patch("mcp_serializer.features.prompt.result.FileParser")
     def test_add_file_message_unsupported_mime_type(self, mock_file_parser):
-        from mcp_serializer.features.base.definitions import FileMetadata
-
         # Create mock FileMetadata for unsupported file type
         mock_metadata = FileMetadata(
             name="document.pdf",
             size=400,
             mime_type="application/pdf",
-            data=b"fake_pdf_data",
+            data=base64.b64encode(b"fake_pdf_data").decode("utf-8"),
             content_type="application",
             uri="file://document.pdf",
         )

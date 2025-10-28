@@ -9,6 +9,8 @@ from mcp_serializer.features.tool.schema import (
     ResourceLinkContent,
     EmbeddedResource,
 )
+from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
+import base64
 
 
 class SampleModel(BaseModel):
@@ -89,8 +91,6 @@ class TestToolsResult:
 
     @patch("mcp_serializer.features.tool.result.FileParser")
     def test_add_file_text_success(self, mock_file_parser):
-        from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
-
         # Create mock FileMetadata
         mock_metadata = FileMetadata(
             name="file.txt",
@@ -112,9 +112,6 @@ class TestToolsResult:
 
     @patch("mcp_serializer.features.tool.result.FileParser")
     def test_add_file_image_success(self, mock_file_parser):
-        from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
-        import base64
-
         # Valid binary image data
         image_data = base64.b64decode(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGA"
@@ -125,7 +122,7 @@ class TestToolsResult:
             name="image.png",
             size=200,
             mime_type="image/png",
-            data=image_data,
+            data=base64.b64encode(image_data).decode("utf-8"),
             content_type=ContentTypes.IMAGE,
         )
 

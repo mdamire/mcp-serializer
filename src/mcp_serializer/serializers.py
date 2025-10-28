@@ -13,8 +13,8 @@ from .initializer import Initializer
 from . import errors
 
 
-class JsonRpcSerializer:
-    """Serializer for JSON-RPC 2.0 requests."""
+class MCPSerializer:
+    """Serializer for MCP requests with JSON-RPC 2.0 protocol."""
 
     def __init__(
         self, initializer: Initializer, registry: MCPRegistry, page_size: int = 10

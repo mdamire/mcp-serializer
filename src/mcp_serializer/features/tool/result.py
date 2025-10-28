@@ -1,6 +1,5 @@
 from typing import Optional, Dict, Any, Union
 from pydantic import BaseModel
-import base64
 from urllib.parse import urlparse
 from ..base.contents import MimeTypes
 from ..base.parsers import FileParser
@@ -81,10 +80,10 @@ class ToolsResult:
             ) from e
 
         if file_metadata.content_type == ContentTypes.TEXT:
-            text = file_metadata.data.decode("utf-8")
+            text = file_metadata.data
             blob = None
         else:
-            blob = base64.b64encode(file_metadata.data).decode("utf-8")
+            blob = file_metadata.data
             text = None
 
         embedded_resource = self.add_embedded_resource(

@@ -258,6 +258,7 @@ class FileParser:
             with open(file, "rb") as f:
                 file_content = f.read()
         else:
+            # Handle file-like objects (may be opened or closed)
             file_path = getattr(file, "name", "unknown")
             if hasattr(file_path, "__fspath__"):  # Handle Path objects
                 file_name = os.path.basename(file_path.__fspath__())
@@ -269,16 +270,38 @@ class FileParser:
                 file_name = "unknown"
                 uri = None
 
-            # Get size and content
-            current_pos = file.tell()
-            file.seek(0)
-            file_content = file.read()
-            size = len(file_content)
-            file.seek(current_pos)  # Restore position
+            should_close = False
+            try:
+                # Try to use the file as-is (might be already open)
+                current_pos = file.tell()
+            except (ValueError, AttributeError):
+                # File is closed or doesn't support tell()
+                if hasattr(file, "open"):
+                    file.open("rb")
+                    should_close = True
+                    current_pos = 0
+                else:
+                    # Can't open, try reading anyway
+                    current_pos = 0
 
-            # Convert to bytes if needed
-            if isinstance(file_content, str):
-                file_content = file_content.encode("utf-8")
+            try:
+                # Get size and content
+                file.seek(0)
+                file_content = file.read()
+                size = len(file_content)
+
+                # Restore position only if file supports it
+                try:
+                    file.seek(current_pos)
+                except (ValueError, AttributeError):
+                    pass
+
+                if isinstance(file_content, str):
+                    file_content = file_content.encode("utf-8")
+            finally:
+                # Close file if we opened it
+                if should_close and hasattr(file, "close"):
+                    file.close()
 
         return file_name, size, file_content, uri
 

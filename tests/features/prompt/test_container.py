@@ -1,5 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch
+import base64
+from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
 from mcp_serializer.features.prompt.container import (
     PromptsContainer,
     PromptRegistry,
@@ -189,15 +191,13 @@ class TestPromptsContainer:
     @patch("mcp_serializer.features.prompt.result.FileParser")
     def test_add_file_prompt(self, mock_file_parser):
         """Test adding file prompts with text and image content."""
-        from mcp_serializer.features.base.definitions import FileMetadata, ContentTypes
-        import base64
 
         # Test text file with all parameters
         mock_text_metadata = FileMetadata(
             name="doc.txt",
             size=150,
             mime_type="text/plain",
-            data=b"Documentation content",
+            data="Documentation content",
             content_type=ContentTypes.TEXT,
             uri="file://doc.txt",
         )
@@ -228,7 +228,7 @@ class TestPromptsContainer:
             name="image.png",
             size=200,
             mime_type="image/png",
-            data=b"fake_image_data",
+            data=base64.b64encode(b"fake_image_data").decode("utf-8"),
             content_type=ContentTypes.IMAGE,
             uri="file://image.png",
         )

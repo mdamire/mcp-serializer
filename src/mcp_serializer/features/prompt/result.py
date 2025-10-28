@@ -35,7 +35,12 @@ class PromptsResult:
         resource_container=None,
     ):
         self.messages = []
-        self.default_role = role or self.Roles.USER
+        if role:
+            if not isinstance(role, self.Roles) and not self.Roles.has_value(role):
+                raise ValueError(f"Invalid default role: {role}")
+            self.default_role = role.value if hasattr(role, "value") else role
+        else:
+            self.default_role = self.Roles.USER.value
         self.resource_container = resource_container
 
     def _add_message(
@@ -43,7 +48,7 @@ class PromptsResult:
     ):
         """Add a message with role and content."""
         if not role:
-            role = self.default_role.value
+            role = self.default_role
         else:
             role = role.value if isinstance(role, self.Roles) else role
         if not self.Roles.has_value(role):
@@ -132,25 +137,22 @@ class PromptsResult:
         content_type = file_metadata.content_type
 
         if content_type == ContentTypes.TEXT:
-            text = file_metadata.data.decode("utf-8")
             return self.add_text(
-                text=text,
+                text=file_metadata.data,
                 role=role,
                 mime_type=file_metadata.mime_type,
                 annotations=annotations,
             )
         elif content_type == ContentTypes.IMAGE:
-            data = base64.b64encode(file_metadata.data).decode("utf-8")
             return self.add_image(
-                data=data,
+                data=file_metadata.data,
                 mime_type=file_metadata.mime_type,
                 role=role,
                 annotations=annotations,
             )
         elif content_type == ContentTypes.AUDIO:
-            data = base64.b64encode(file_metadata.data).decode("utf-8")
             return self.add_audio(
-                data=data,
+                data=file_metadata.data,
                 mime_type=file_metadata.mime_type,
                 role=role,
                 annotations=annotations,
@@ -191,11 +193,11 @@ class PromptsResult:
         }
 
         if file_metadata.content_type == ContentTypes.TEXT:
-            text = file_metadata.data.decode("utf-8")
+            text = file_metadata.data
             blob = None
         else:
             text = None
-            blob = base64.b64encode(file_metadata.data).decode("utf-8")
+            blob = file_metadata.data
 
         embedded_resource = self.add_embedded_resource(
             text=text,

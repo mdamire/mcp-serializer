@@ -1,8 +1,9 @@
+import base64
 from pydantic import BaseModel, field_validator
 from typing import Optional, Dict, Any, List, Union
 from ..base.schema import JsonSchema
 from ..resource.schema import TextContentSchema, BinaryContentSchema
-import base64
+from ..resource.schema import AnnotationSchema
 
 
 class ToolsDefinitionSchema(BaseModel):
@@ -11,7 +12,7 @@ class ToolsDefinitionSchema(BaseModel):
     description: Optional[str] = None
     inputSchema: Optional[JsonSchema] = None
     outputSchema: Optional[JsonSchema] = None
-    annotations: Optional[Dict[str, Any]] = None
+    annotations: Optional[Union[AnnotationSchema, Dict[str, Any]]] = None
 
 
 class ToolsListSchema(BaseModel):

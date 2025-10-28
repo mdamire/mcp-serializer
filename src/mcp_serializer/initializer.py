@@ -29,7 +29,7 @@ class Initializer:
         self.capabilities["tools"] = {"listChanged": list_changed}
         return self
 
-    def build_result(self, rpc_params: dict):
+    def build_result(self, client_params: dict):
         self.result = {
             "protocolVersion": self.protocol_version,
             "capabilities": self.capabilities,

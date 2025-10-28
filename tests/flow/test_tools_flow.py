@@ -7,62 +7,12 @@ import json
 from pydantic import BaseModel
 from mcp_serializer.registry import MCPRegistry
 from mcp_serializer.initializer import Initializer
-from mcp_serializer.serializers import JsonRpcSerializer
+from mcp_serializer.serializers import MCPSerializer
 from mcp_serializer.features.tool.result import ToolsResult
 from mcp_serializer.features.resource.schema import AnnotationSchema
 
 # Initialize registry at module level
 registry = MCPRegistry()
-
-
-# ============================================================================
-# As in Documentation
-# ============================================================================
-
-
-# when returned str, it becomes text content
-@registry.tool(
-    annotations=AnnotationSchema(
-        audience="user", priority=0.5, lastModified="2025-01-01"
-    )
-)
-def get_documentation():
-    """Tool title
-
-    Tool description"""
-    return "Test tool executed successfully"
-
-
-class WeatherData(BaseModel):
-    temperature: float
-    conditions: str
-    city: str
-
-
-@registry.tool()
-def get_weather_data() -> WeatherData:
-    return WeatherData(temperature=22.5, conditions="Sunny", city="New York")
-
-
-# Or return a list
-@registry.tool(
-    annotations=AnnotationSchema(
-        audience="user", priority=0.5, lastModified="2025-01-01"
-    )
-)
-def get_documentation2():
-    """Tool title
-
-    Tool description"""
-
-    result = ToolsResult()
-    result.error = True
-    result.add_text_content("abc", annotations={})
-    result.add_file("file.txt", annotations={})  # this will become embadded resource
-    result.add_resource_link(
-        uri="file:///file.txt", registry=registry
-    )  # it will be resource link
-    return result
 
 
 # ============================================================================
@@ -74,9 +24,8 @@ def get_documentation2():
 def add_numbers(a: int, b: int):
     """Add two numbers and return the result."""
     result = a + b
-    content = ToolsContent()
-    content.add_text(f"The sum of {a} and {b} is {result}")
-    return content
+    content = ToolsResult()
+    return f"The sum of {a} and {b} is {result}"
 
 
 @registry.tool(name="echo")
@@ -85,8 +34,8 @@ def echo_message(message: str, uppercase: bool = False):
 
     Echo a message, optionally in uppercase."""
     output = message.upper() if uppercase else message
-    content = ToolsContent()
-    content.add_text(output)
+    content = ToolsResult()
+    content.add_text_content(output)
     return content
 
 
@@ -95,9 +44,8 @@ def get_weather(city: str):
     """Get weather tool
 
     Get weather for a city."""
-    content = ToolsContent()
-    content.add_text(f"Weather in {city}: Sunny, 72°F")
-    return content
+    content = ToolsResult()
+    return f"Weather in {city}: Sunny, 72°F"
 
 
 # ============================================================================
@@ -117,7 +65,7 @@ initializer.add_server_info(
 initializer.add_tools(list_changed=False)
 
 # Create serializer
-serializer = JsonRpcSerializer(initializer, registry)
+serializer = MCPSerializer(initializer, registry)
 
 
 # ============================================================================
@@ -230,7 +178,7 @@ def test_error_handling():
 
     assert response is not None
     assert "error" in response
-    assert response["error"]["code"] == -32002  # Tool not found
+    assert response["error"]["code"] == -32002  # Tools not found
 
     # Test missing required parameter
     request = {
@@ -238,7 +186,7 @@ def test_error_handling():
         "id": 16,
         "method": "tools/call",
         "params": {
-            "name": "calculator_add",
+            "name": "add_numbers",
             "arguments": {"a": 10},  # Missing 'b'
         },
     }

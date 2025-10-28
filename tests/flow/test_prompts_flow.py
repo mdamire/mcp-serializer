@@ -4,55 +4,50 @@ This test demonstrates the complete workflow for prompt registration and retriev
 """
 
 import json
+import tempfile
+import os
 from mcp_serializer.registry import MCPRegistry
 from mcp_serializer.initializer import Initializer
-from mcp_serializer.serializers import JsonRpcSerializer
-from mcp_serializer.features.prompt.result import PromptsResult, PromptsContent
+from mcp_serializer.serializers import MCPSerializer
+from mcp_serializer.features.prompt.result import PromptsResult
 
 # Initialize registry at module level
 registry = MCPRegistry()
 
-# ============================================================================
-# As in Documentation
-# ============================================================================
+# Create temporary files for testing
+# Text file
+temp_text_file = tempfile.NamedTemporaryFile(
+    mode="w", suffix=".txt", delete=False, dir=tempfile.gettempdir()
+)
+temp_text_file.write("This is a sample instruction from a text file.")
+temp_text_file_path = temp_text_file.name
+temp_text_file.close()
 
-# registry.add_prompt_from_file(
-#     "file.txt", role=PromptsResult.Roles.USER
-# )  # this will be text content
+# Markdown file
+temp_md_file = tempfile.NamedTemporaryFile(
+    mode="w", suffix=".md", delete=False, dir=tempfile.gettempdir()
+)
+temp_md_file.write("# Documentation\n\nThis is markdown content for prompts.")
+temp_md_file_path = temp_md_file.name
+temp_md_file.close()
 
-
-# for complex cases you can return a PromptsResult object
-# the function can be with optional/required arguments
-@registry.prompt()
-def greeting_prompt(type: str = "text"):
-    """Greeting prompt
-
-    Generate a greeting prompt."""
-    result = PromptsResult()
-    result.add_text(
-        "Hello! How can I assist you today?", role=PromptsResult.Roles.ASSISTANT
-    )
-    result.add_file(
-        "file.txt",
-        role=PromptsResult.Roles.USER,
-        title="File Title",
-        description="File Description",
-    )  # this will be embadded resource
-    return result
-
-
-# Register Prompts
-# ============================================================================
+# JSON file for embedded resource
+temp_json_file = tempfile.NamedTemporaryFile(
+    mode="w", suffix=".json", delete=False, dir=tempfile.gettempdir()
+)
+temp_json_file.write(json.dumps({"example": "data", "type": "config"}))
+temp_json_file_path = temp_json_file.name
+temp_json_file.close()
 
 
 @registry.prompt()
-def greeting_prompt():
+def greeting():
     """Greeting prompt
 
     Generate a greeting prompt."""
-    content = PromptsContent()
+    content = PromptsResult()
     content.add_text(
-        "Hello! How can I assist you today?", role=PromptsContent.Roles.ASSISTANT
+        "Hello! How can I assist you today?", role=PromptsResult.Roles.ASSISTANT
     )
     return content
 
@@ -62,9 +57,9 @@ def code_review_prompt(language: str, code_snippet: str):
     """Code review prompt
 
     Generate a code review prompt with context."""
-    content = PromptsContent()
+    content = PromptsResult()
     content.add_text(
-        f"Please review the following {language} code:", role=PromptsContent.Roles.USER
+        f"Please review the following {language} code:", role=PromptsResult.Roles.USER
     )
     content.add_text(code_snippet, role="user")
     content.add_text(
@@ -77,13 +72,106 @@ def code_review_prompt(language: str, code_snippet: str):
 @registry.prompt(name="summarize", description="Summarize a document")
 def summarize_prompt(document: str, max_length: int = 100):
     """Generate a summarization prompt."""
-    content = PromptsContent()
+    content = PromptsResult()
     content.add_text(
         f"Please summarize the following document in under {max_length} words:",
         role="user",
     )
     content.add_text(document, role="user")
     return content
+
+
+# Static text prompt
+registry.add_text_prompt(
+    name="welcome",
+    text="Welcome to our service! How can we help you today?",
+    role="user",
+    title="Welcome Prompt",
+    description="A welcoming prompt for users",
+)
+
+# Static text prompt with mime type
+registry.add_text_prompt(
+    name="markdown_guide",
+    text="# Quick Guide\n\nHere are some tips to get started...",
+    role="assistant",
+    mime_type="text/markdown",
+    title="Markdown Guide",
+    description="A guide in markdown format",
+)
+
+# Static file-based prompts using file path (string)
+registry.add_file_prompt(
+    name="file_instruction",
+    file=temp_text_file_path,
+    role="user",
+    title="File Instruction",
+    description="Instruction loaded from a text file",
+)
+
+registry.add_file_prompt(
+    name="markdown_file_guide",
+    file=temp_md_file_path,
+    role="assistant",
+    title="Markdown File Guide",
+    description="Guide loaded from a markdown file",
+)
+
+# Static file-based prompt using file object (BinaryIO) - opened
+with open(temp_text_file_path, "rb") as file_obj:
+    registry.add_file_prompt(
+        name="file_object_instruction",
+        file=file_obj,
+        role="user",
+        title="File Object Instruction",
+        description="Instruction loaded from a file object",
+    )
+
+
+# Prompt function using add_file_message and add_file_resource with file paths
+@registry.prompt()
+def documentation_prompt(section: str):
+    """Documentation prompt with files
+
+    Generate documentation prompt with file content and embedded resources."""
+    result = PromptsResult()
+
+    # Add text message
+    result.add_text(
+        f"Here is the documentation for {section}:", role=PromptsResult.Roles.USER
+    )
+
+    # Add file content as message (using file path)
+    result.add_file_message(file=temp_md_file_path, role=PromptsResult.Roles.USER)
+
+    # Add file as embedded resource (using file path)
+    result.add_file_resource(
+        file=temp_json_file_path, role=PromptsResult.Roles.USER
+    )
+
+    return result
+
+
+# Prompt function using add_file_message and add_file_resource with file objects
+@registry.prompt()
+def file_object_prompt(topic: str):
+    """File object prompt
+
+    Generate prompt using file objects instead of paths."""
+    result = PromptsResult()
+
+    # Add text message
+    result.add_text(f"Topic: {topic}", role=PromptsResult.Roles.USER)
+
+    # Add file content as message (using file object)
+    with open(temp_text_file_path, "rb") as f:
+        result.add_file_message(file=f, role=PromptsResult.Roles.USER)
+
+    # Add file as embedded resource (using file object)
+    with open(temp_json_file_path, "rb") as f:
+        result.add_file_resource(file=f, role=PromptsResult.Roles.ASSISTANT)
+
+    return result
 
 
 # ============================================================================
@@ -104,7 +192,7 @@ initializer.add_server_info(
 initializer.add_prompt(list_changed=False)
 
 # Create serializer
-serializer = JsonRpcSerializer(initializer, registry)
+serializer = MCPSerializer(initializer, registry)
 
 
 # ============================================================================
@@ -149,12 +237,22 @@ def test_prompts_list_request():
     assert response["id"] == 8
     assert "result" in response
     assert "prompts" in response["result"]
-    assert len(response["result"]["prompts"]) == 3  # greeting, code_review, summarize
+    assert len(response["result"]["prompts"]) == 10
+    # greeting, code_review, summarize, welcome, markdown_guide,
+    # file_instruction, markdown_file_guide, file_object_instruction,
+    # documentation_prompt, file_object_prompt
 
     prompt_names = [prompt["name"] for prompt in response["result"]["prompts"]]
     assert "greeting" in prompt_names
-    assert "code_review" in prompt_names
+    assert "code_review_prompt" in prompt_names
     assert "summarize" in prompt_names
+    assert "welcome" in prompt_names
+    assert "markdown_guide" in prompt_names
+    assert "file_instruction" in prompt_names
+    assert "markdown_file_guide" in prompt_names
+    assert "file_object_instruction" in prompt_names
+    assert "documentation_prompt" in prompt_names
+    assert "file_object_prompt" in prompt_names
 
 
 def test_prompts_get_request():
@@ -170,6 +268,7 @@ def test_prompts_get_request():
     response = serializer.process_request(request)
 
     assert response is not None
+    assert type(response) == dict
     assert response["jsonrpc"] == "2.0"
     assert response["id"] == 9
     assert "result" in response
@@ -182,7 +281,7 @@ def test_prompts_get_request():
         "id": 10,
         "method": "prompts/get",
         "params": {
-            "name": "code_review",
+            "name": "code_review_prompt",
             "arguments": {
                 "language": "Python",
                 "code_snippet": "def hello():\n    print('world')",
@@ -196,6 +295,184 @@ def test_prompts_get_request():
     assert "result" in response
     assert "messages" in response["result"]
     assert "Python" in str(response["result"]["messages"])
+
+
+def test_static_text_prompts():
+    """Test getting static text prompts."""
+    # Test welcome prompt
+    request = {
+        "jsonrpc": "2.0",
+        "id": 13,
+        "method": "prompts/get",
+        "params": {"name": "welcome"},
+    }
+
+    response = serializer.process_request(request)
+
+    assert response is not None
+    assert "result" in response
+    assert "messages" in response["result"]
+    assert len(response["result"]["messages"]) == 1
+    assert response["result"]["messages"][0]["role"] == "user"
+    assert (
+        "Welcome to our service"
+        in response["result"]["messages"][0]["content"]["text"]
+    )
+    assert response["result"]["description"] == "A welcoming prompt for users"
+
+    # Test markdown guide prompt
+    request = {
+        "jsonrpc": "2.0",
+        "id": 14,
+        "method": "prompts/get",
+        "params": {"name": "markdown_guide"},
+    }
+
+    response = serializer.process_request(request)
+
+    assert response is not None
+    assert "result" in response
+    assert response["result"]["messages"][0]["role"] == "assistant"
+    assert "# Quick Guide" in response["result"]["messages"][0]["content"]["text"]
+    assert (
+        response["result"]["messages"][0]["content"]["mimeType"] == "text/markdown"
+    )
+
+
+def test_file_based_prompts():
+    """Test static file-based prompts using file paths."""
+    # Test text file prompt (file path)
+    request = {
+        "jsonrpc": "2.0",
+        "id": 15,
+        "method": "prompts/get",
+        "params": {"name": "file_instruction"},
+    }
+
+    response = serializer.process_request(request)
+
+    assert response is not None
+    assert "result" in response
+    assert "messages" in response["result"]
+    assert len(response["result"]["messages"]) == 1
+    assert response["result"]["messages"][0]["role"] == "user"
+    assert (
+        "sample instruction from a text file"
+        in response["result"]["messages"][0]["content"]["text"]
+    )
+    assert response["result"]["messages"][0]["content"]["mimeType"] == "text/plain"
+
+    # Test markdown file prompt (file path)
+    request = {
+        "jsonrpc": "2.0",
+        "id": 16,
+        "method": "prompts/get",
+        "params": {"name": "markdown_file_guide"},
+    }
+
+    response = serializer.process_request(request)
+
+    assert response is not None
+    assert "result" in response
+    assert response["result"]["messages"][0]["role"] == "assistant"
+    assert "# Documentation" in response["result"]["messages"][0]["content"]["text"]
+    assert (
+        response["result"]["messages"][0]["content"]["mimeType"] == "text/markdown"
+    )
+
+    # Test file object prompt (BinaryIO)
+    request = {
+        "jsonrpc": "2.0",
+        "id": 18,
+        "method": "prompts/get",
+        "params": {"name": "file_object_instruction"},
+    }
+
+    response = serializer.process_request(request)
+
+    assert response is not None
+    assert "result" in response
+    assert "messages" in response["result"]
+    assert len(response["result"]["messages"]) == 1
+    assert response["result"]["messages"][0]["role"] == "user"
+    assert (
+        "sample instruction from a text file"
+        in response["result"]["messages"][0]["content"]["text"]
+    )
+    assert response["result"]["messages"][0]["content"]["mimeType"] == "text/plain"
+
+
+def test_prompt_with_file_methods():
+    """Test prompt function using add_file_message and add_file_resource with file paths."""
+    request = {
+        "jsonrpc": "2.0",
+        "id": 17,
+        "method": "prompts/get",
+        "params": {"name": "documentation_prompt", "arguments": {"section": "API"}},
+    }
+
+    response = serializer.process_request(request)
+
+    assert response is not None
+    assert "result" in response
+    assert "messages" in response["result"]
+    assert len(response["result"]["messages"]) == 3
+
+    # First message - text
+    assert response["result"]["messages"][0]["role"] == "user"
+    assert "documentation for API" in response["result"]["messages"][0]["content"]["text"]
+
+    # Second message - file content via add_file_message (file path)
+    assert response["result"]["messages"][1]["role"] == "user"
+    assert response["result"]["messages"][1]["content"]["type"] == "text"
+    assert "# Documentation" in response["result"]["messages"][1]["content"]["text"]
+    assert response["result"]["messages"][1]["content"]["mimeType"] == "text/markdown"
+
+    # Third message - embedded resource via add_file_resource (file path)
+    assert response["result"]["messages"][2]["role"] == "user"
+    assert response["result"]["messages"][2]["content"]["type"] == "resource"
+    resource = response["result"]["messages"][2]["content"]["resource"]
+    assert "text" in resource
+    assert '"example": "data"' in resource["text"]
+    assert resource["mimeType"] == "application/json"
+
+
+def test_prompt_with_file_objects():
+    """Test prompt function using add_file_message and add_file_resource with file objects."""
+    request = {
+        "jsonrpc": "2.0",
+        "id": 19,
+        "method": "prompts/get",
+        "params": {"name": "file_object_prompt", "arguments": {"topic": "Testing"}},
+    }
+
+    response = serializer.process_request(request)
+
+    assert response is not None
+    assert "result" in response
+    assert "messages" in response["result"]
+    assert len(response["result"]["messages"]) == 3
+
+    # First message - text
+    assert response["result"]["messages"][0]["role"] == "user"
+    assert "Topic: Testing" in response["result"]["messages"][0]["content"]["text"]
+
+    # Second message - file content via add_file_message (file object)
+    assert response["result"]["messages"][1]["role"] == "user"
+    assert response["result"]["messages"][1]["content"]["type"] == "text"
+    assert (
+        "sample instruction from a text file"
+        in response["result"]["messages"][1]["content"]["text"]
+    )
+    assert response["result"]["messages"][1]["content"]["mimeType"] == "text/plain"
+
+    # Third message - embedded resource via add_file_resource (file object)
+    assert response["result"]["messages"][2]["role"] == "assistant"
+    assert response["result"]["messages"][2]["content"]["type"] == "resource"
+    resource = response["result"]["messages"][2]["content"]["resource"]
+    assert "text" in resource
+    assert '"example": "data"' in resource["text"]
+    assert resource["mimeType"] == "application/json"
 
 
 def test_batch_request():
@@ -216,3 +493,13 @@ def test_batch_request():
     assert isinstance(responses, list)
     assert len(responses) == 2
     assert all("result" in resp for resp in responses)
+
+
+def test_cleanup():
+    """Clean up temporary files."""
+    if os.path.exists(temp_text_file_path):
+        os.unlink(temp_text_file_path)
+    if os.path.exists(temp_md_file_path):
+        os.unlink(temp_md_file_path)
+    if os.path.exists(temp_json_file_path):
+        os.unlink(temp_json_file_path)

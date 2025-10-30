@@ -27,7 +27,7 @@ class ResourceResult:
         text_content = TextContentSchema(
             text=text,
             mimeType=mime_type,
-            uri=uri or "",
+            uri=uri,
             name=name,
             title=title,
             annotations=annotations,
@@ -55,7 +55,7 @@ class ResourceResult:
         binary_content = BinaryContentSchema(
             blob=blob,
             mimeType=mime_type,
-            uri=uri or "",
+            uri=uri,
             name=name,
             title=title,
             annotations=annotations,
@@ -72,7 +72,7 @@ class ResourceResult:
         annotations=None,
     ):
         content_kwargs = {
-            "uri": uri,
+            "uri": uri or file_metadata.uri,
             "mime_type": file_metadata.mime_type,
             "name": name or file_metadata.name,
             "title": title,

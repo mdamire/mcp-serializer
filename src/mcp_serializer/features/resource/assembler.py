@@ -112,7 +112,9 @@ class ResourceSchemaAssembler(FeatureSchemaAssembler):
             raise self.UnsupportedResultTypeError(type(resource_result))
 
         content_schema_list = []
-        for content in resource_result.content_list:
+        if len(resource_result.content_list) == 1:
+            content = resource_result.content_list[0]
+
             # get info from content/registry/metadata
             name = content.name or resource_registry.extra.get("name")
             title = content.title or resource_registry.extra.get("title")
@@ -131,6 +133,9 @@ class ResourceSchemaAssembler(FeatureSchemaAssembler):
             )
 
             content_schema_list.append(updated_content)
+
+        else:
+            content_schema_list = resource_result.content_list
 
         result_schema = ResultSchema(contents=content_schema_list)
         result_schema = self._build_non_none_dict(result_schema)

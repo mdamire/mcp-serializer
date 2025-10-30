@@ -80,7 +80,7 @@ class ResourceTemplateListResultSchema(BaseModel):
 
 
 class BaseContentSchema(BaseModel):
-    uri: str
+    uri: Optional[str] = None
     mimeType: Optional[str] = None
     name: Optional[str] = None
     title: Optional[str] = None

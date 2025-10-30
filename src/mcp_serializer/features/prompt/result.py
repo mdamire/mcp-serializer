@@ -32,6 +32,7 @@ class PromptsResult:
     def __init__(
         self,
         role: Optional[Roles] = None,
+        description: Optional[str] = None,
         resource_container=None,
     ):
         self.messages = []
@@ -41,6 +42,7 @@ class PromptsResult:
             self.default_role = role.value if hasattr(role, "value") else role
         else:
             self.default_role = self.Roles.USER.value
+        self.description = description
         self.resource_container = resource_container
 
     def _add_message(

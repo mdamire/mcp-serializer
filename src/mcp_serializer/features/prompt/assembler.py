@@ -101,18 +101,8 @@ class PromptsSchemaAssembler(FeatureSchemaAssembler):
                 f"Unsupported result type: {type(result)}"
             )
 
-        # Get description based on registry type
-        if isinstance(registry, PromptRegistry):
-            description = (
-                registry.extra.get("description") or registry.metadata.description
-            )
-        elif isinstance(registry, ResultRegistry):
-            description = registry.extra.get("description")
-        else:
-            description = None
-
         result_schema = PromptResultSchema(
-            description=description,
+            description=result.description,
             messages=messages,
         )
-        return result_schema.model_dump()
+        return self._build_non_none_dict(result_schema)

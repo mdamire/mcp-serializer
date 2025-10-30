@@ -4,7 +4,6 @@ from ..base.container import FeatureContainer
 from ..base.parsers import FunctionParser
 from ..base.definitions import FunctionMetadata
 from ..base.contents import MimeTypes
-from typing import Union, BinaryIO
 from urllib.parse import urlparse
 
 

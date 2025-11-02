@@ -177,12 +177,7 @@ def get_weather_forecast(city: str, days: int = 3) -> ToolsResult:
     return result
 
 
-# ToolsResult supports multiple content types:
-#   - add_text_content(): Plain text or formatted text
-#   - add_file(): Embed a file as a resource
-#   - add_resource_link(): Link to a registered resource
-#   - add_image_content(): Add image data
-#   - add_audio_content(): Add audio data
+# ToolsResult also has add_image_content and add_audio_content functions to add contents manually.
 
 
 ### 4. Registering prompts:
@@ -273,8 +268,7 @@ response = serializer.process_request(
 # request_data parameter can be a dict or a JSON string.
 
 
-# ============================================================================
-# Tests
+### 7. Tests
 # ============================================================================
 
 

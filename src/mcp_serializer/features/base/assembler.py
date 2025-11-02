@@ -27,7 +27,8 @@ class FeatureSchemaAssembler:
         return new_dict or None
 
     def _build_non_none_dict(self, schema):
-        updated_dict = self._remove_none_from_dict(schema.model_dump())
+        schema_dict = schema.model_dump() if hasattr(schema, "model_dump") else schema
+        updated_dict = self._remove_none_from_dict(schema_dict)
         return updated_dict
 
     def _append_sorted_list(

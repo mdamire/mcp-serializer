@@ -10,7 +10,7 @@ from .schema import (
     JsonRpcSuccessResponse,
 )
 from .logging import get_logger
-from .initializer import Initializer
+from .initializer import MCPInitializer
 from . import errors
 from .features.base.container import FeatureContainer
 from .features.base.assembler import FeatureSchemaAssembler
@@ -39,7 +39,7 @@ class RPCRequestManager:
         resources = "resources"
         prompts = "prompts"
 
-    def __init__(self, initializer: Initializer, registry: MCPRegistry, page_size):
+    def __init__(self, initializer: MCPInitializer, registry: MCPRegistry, page_size):
         self.registry = registry
         self.initializer = initializer
         self.page_size = page_size
@@ -254,7 +254,9 @@ class RPCRequestManager:
             else:
                 error = errors.InternalError(e)
             response = error.get_response(rpc_request)
-        return response
+
+        response_dict = FeatureSchemaAssembler()._build_non_none_dict(response)
+        return response_dict
 
     def process_request(
         self, rpc_request: Union[JsonRpcRequest, List[JsonRpcRequest]]

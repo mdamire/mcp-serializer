@@ -122,7 +122,7 @@ class TestFunctionParser:
 
         assert metadata.name == "no_docstring_function"
         assert metadata.title is None
-        assert metadata.description == ""
+        assert metadata.description is None
         assert len(metadata.arguments) == 2
 
         x_arg = metadata.arguments[0]

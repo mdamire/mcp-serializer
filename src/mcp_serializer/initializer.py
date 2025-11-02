@@ -1,4 +1,4 @@
-class Initializer:
+class MCPInitializer:
     protocol_default_version = "2024-11-05"
 
     def __init__(self, protocol_version=None, instructions=None):

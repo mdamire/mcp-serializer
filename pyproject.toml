@@ -1,6 +1,6 @@
 [project]
 name = "mcp-serializer"
-version = "1.0.0"
+version = "1.1.0"
 description = "Register MCP features and serialize JSON-RPC requests into response data"
 authors = [
     {name = "Amir Ebrahim md.amire02@gmail.com"}
@@ -12,6 +12,11 @@ dependencies = [
     "ruff (>=0.13.2,<0.14.0)",
     "pydantic (>=2.11.10,<3.0.0)"
 ]
+
+[project.urls]
+Homepage = "https://github.com/mdamire/mcp-serializer"
+Repository = "https://github.com/mdamire/mcp-serializer"
+Changelog = "https://github.com/mdamire/mcp-serializer/blob/master/CHANGELOG.md"
 
 [dependency-groups]
 dev = [

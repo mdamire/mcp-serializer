@@ -170,7 +170,7 @@ def get_weather_forecast(city: str, days: int = 3) -> ToolsResult:
     return result
 ```
 
-`ToolsResult` also has `add_image_content` and `add_image_content` functions to add contents manually.
+`ToolsResult` also has `add_image_content` and `add_audio_content` functions to add contents manually.
 
 <br>
 
@@ -238,9 +238,9 @@ This creates a prompt with the name "greeting_prompt". The function docstring is
 An initializer is needed to return the MCP initialization data. You need to add your features to present at initialization time.
 
 ```python
-from mcp_serializer.initializer import Initializer
+from mcp_serializer.initializer import MCPInitializer
 
-initializer = Initializer()
+initializer = MCPInitializer()
 initializer.add_server_info("My MCP Server", "1.0.0", "A title of the server.")
 initializer.add_prompt()
 initializer.add_resources()
@@ -249,10 +249,10 @@ initializer.add_tools()
 
 ### Custom Initializer
 
-You can create your own initializer by inheriting from the `Initializer` class. You can override the `build_result` method to initialize MCP client parameters.
+You can create your own initializer by inheriting from the `MCPInitializer` class. You can override the `build_result` method to initialize MCP client parameters.
 
 ```python
-class MyInitializer(Initializer):
+class MyInitializer(MCPInitializer):
     def build_result(self, client_params: dict):
         self.protocol_version = client_params.get(
             "protocolVersion", self.protocol_version
@@ -426,8 +426,7 @@ The following examples demonstrate the complete request-response cycle using the
                     "required": ["city"]
                 }
             }
-        ],
-        "nextCursor": null
+        ]
     }
 }
 ```
@@ -567,7 +566,7 @@ The following examples demonstrate the complete request-response cycle using the
         "prompts": [
             {
                 "name": "create_user",
-                "description": "Create a new use for any purpose."
+                "description": "Create a new user for any purpose."
             },
             {
                 "name": "greeting",
@@ -579,8 +578,7 @@ The following examples demonstrate the complete request-response cycle using the
                 "description": "This prompt helps to greet a user.",
                 "arguments": [{"name": "name", "type": "string", "required": true}]
             }
-        ],
-        "nextCursor": null
+        ]
     }
 }
 ```

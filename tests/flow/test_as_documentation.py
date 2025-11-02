@@ -2,7 +2,7 @@ import tempfile
 import json
 
 from mcp_serializer.registry import MCPRegistry
-from mcp_serializer.initializer import Initializer
+from mcp_serializer.initializer import MCPInitializer
 from mcp_serializer.serializers import MCPSerializer
 
 ### Helpers
@@ -229,16 +229,16 @@ def greeting_prompt(name: str):
 
 ### 5. Creating a initializer
 # Initializer is needed to return the MCP initialization data. You need to add your features to present at initialization time.
-initializer = Initializer()
+initializer = MCPInitializer()
 initializer.add_server_info("My MCP Server", "1.0.0", "A title of the server.")
 initializer.add_prompt()
 initializer.add_resources()
 initializer.add_tools()
 
 
-# You can create your own initializer by inheriting from Initializer class. You can override build_result method to
+# You can create your own initializer by inheriting from MCPInitializer class. You can override build_result method to
 # initialize MCP client parameters.
-class MyInitializer(Initializer):
+class MyInitializer(MCPInitializer):
     def build_result(self, client_params: dict):
         self.protocol_version = client_params.get(
             "protocolVersion", self.protocol_version
@@ -390,7 +390,6 @@ def test_tools_list():
                     },
                 },
             ],
-            "nextCursor": None,
         },
     }
 
@@ -530,7 +529,6 @@ def test_prompts_list():
                     "arguments": [{"name": "name", "type": "string", "required": True}],
                 },
             ],
-            "nextCursor": None,
         },
     }
 

@@ -7,7 +7,7 @@ import json
 import tempfile
 import os
 from mcp_serializer.registry import MCPRegistry
-from mcp_serializer.initializer import Initializer
+from mcp_serializer.initializer import MCPInitializer
 from mcp_serializer.serializers import MCPSerializer
 from mcp_serializer.features.resource.result import ResourceResult
 
@@ -93,7 +93,7 @@ registry.add_file_resource(
 # Create Initializer and Serializer
 # ============================================================================
 
-initializer = Initializer(
+initializer = MCPInitializer(
     protocol_version="2024-11-05",
     instructions="This is a test MCP server with resources.",
 )

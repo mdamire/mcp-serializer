@@ -87,7 +87,7 @@ class FunctionParser:
             dict with keys: 'title', 'description', 'params'
         """
         if not docstring:
-            return {"title": None, "description": "", "params": {}}
+            return {"title": None, "description": None, "params": {}}
 
         # Split docstring into lines and clean up
         lines = docstring.strip().split("\n")
@@ -135,7 +135,7 @@ class FunctionParser:
             if line:  # Skip empty lines within description
                 description_lines.append(line)
 
-        description = " ".join(description_lines)
+        description = " ".join(description_lines) if description_lines else None
 
         # Extract parameters from the parameters section
         if param_start_idx < len(lines):

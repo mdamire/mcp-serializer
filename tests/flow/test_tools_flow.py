@@ -6,7 +6,7 @@ This test demonstrates the complete workflow for tool registration and execution
 import json
 from pydantic import BaseModel
 from mcp_serializer.registry import MCPRegistry
-from mcp_serializer.initializer import Initializer
+from mcp_serializer.initializer import MCPInitializer
 from mcp_serializer.serializers import MCPSerializer
 from mcp_serializer.features.tool.result import ToolsResult
 from mcp_serializer.features.resource.schema import AnnotationSchema
@@ -52,7 +52,7 @@ def get_weather(city: str):
 # Create Initializer and Serializer
 # ============================================================================
 
-initializer = Initializer(
+initializer = MCPInitializer(
     protocol_version="2024-11-05", instructions="This is a test MCP server with tools."
 )
 

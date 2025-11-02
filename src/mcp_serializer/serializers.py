@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from .schema import JsonRpcRequest
 from .registry import MCPRegistry
 from .managers import RPCRequestManager
-from .initializer import Initializer
+from .initializer import MCPInitializer
 from . import errors
 
 
@@ -17,7 +17,7 @@ class MCPSerializer:
     """Serializer for MCP requests with JSON-RPC 2.0 protocol."""
 
     def __init__(
-        self, initializer: Initializer, registry: MCPRegistry, page_size: int = 10
+        self, initializer: MCPInitializer, registry: MCPRegistry, page_size: int = 10
     ):
         self.initializer = initializer
         self.registry = registry

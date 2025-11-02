@@ -87,7 +87,7 @@ class ToolsResult:
             text = None
 
         embedded_resource = self.add_embedded_resource(
-            uri=uri,
+            uri=uri or file_metadata.uri,
             text=text,
             blob=blob,
             mime_type=file_metadata.mime_type,
@@ -97,7 +97,7 @@ class ToolsResult:
         )
         return embedded_resource
 
-    def _get_resource_info_from_registry(self, uri: str, registry) -> dict:
+    def _get_resource_registry(self, uri: str, registry):
         resource_container = registry.resource_container
         if not resource_container:
             raise ValueError("No resource has been defined for this registry")
@@ -105,14 +105,14 @@ class ToolsResult:
         # get from resource list
         for resource_registry in resource_container.schema_assembler.resource_list:
             if resource_registry.uri.rstrip("/") == uri.rstrip("/"):
-                return resource_registry.extra
+                return resource_registry
 
         # get from resource template list
         for (
             resource_template_registry
         ) in resource_container.schema_assembler.resource_template_list:
             if uri.startswith(resource_template_registry.uri):
-                return resource_template_registry.extra
+                return resource_template_registry
 
         # to do get http resource info from resource container's assembler
 
@@ -130,6 +130,7 @@ class ToolsResult:
         uri: str,
         registry=None,
         name: Optional[str] = None,
+        title: Optional[str] = None,
         description: Optional[str] = None,
         mime_type: Optional[str] = None,
         annotations: Optional[Dict[str, Any]] = None,
@@ -140,20 +141,33 @@ class ToolsResult:
         elif not registry:
             raise ValueError("registry is required for non-HTTP URIs")
 
-        resource_info = {}
+        resource_registry = None
         if registry:
-            resource_info = self._get_resource_info_from_registry(uri, registry)
-            if not is_http and not resource_info:
+            resource_registry = self._get_resource_registry(uri, registry)
+            if not is_http and not resource_registry:
                 raise ValueError(
                     f"Resource with URI '{uri}' is not found. Define the resource first."
                 )
 
+        if resource_registry:
+            name = name or resource_registry.extra.get("name")
+            title = title or resource_registry.extra.get("title")
+            description = description or resource_registry.extra.get("description")
+            mime_type = mime_type or resource_registry.extra.get("mime_type")
+            annotations = annotations or resource_registry.extra.get("annotations")
+
+            if hasattr(resource_registry, "metadata"):
+                name = name or resource_registry.metadata.name
+                title = title or resource_registry.metadata.title
+                description = description or resource_registry.metadata.description
+
         resource_link = ResourceLinkContent(
             uri=uri,
-            name=name or resource_info.get("name"),
-            description=description or resource_info.get("description"),
-            mimeType=mime_type or resource_info.get("mimeType"),
-            annotations=annotations or resource_info.get("annotations"),
+            name=name,
+            title=title,
+            description=description,
+            mimeType=mime_type,
+            annotations=annotations,
         )
         self.content_list.append(resource_link)
         return resource_link

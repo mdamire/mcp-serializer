@@ -3,7 +3,7 @@ JSON-RPC 2.0 Pydantic schemas for validation.
 """
 
 from typing import Any, Union, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class JsonRpcRequest(BaseModel):
@@ -20,7 +20,15 @@ class JsonRpcSuccessResponse(BaseModel):
 
     jsonrpc: str = "2.0"
     result: Any
-    id: Union[str, int, None]
+    id: Union[int, None]
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def convert_id_to_int(cls, value):
+        """Convert id to int if it's not None."""
+        if value is not None:
+            return int(value)
+        return value
 
 
 class JsonRpcError(BaseModel):

@@ -175,8 +175,9 @@ class TestToolsResult:
         mock_resource.uri = "file://test.txt"
         mock_resource.extra = {
             "name": "Test Resource",
+            "title": "Test Resource Title",
             "description": "A test resource",
-            "mimeType": "text/plain",
+            "mime_type": "text/plain",
         }
 
         mock_container.schema_assembler.resource_list = [mock_resource]
@@ -190,6 +191,7 @@ class TestToolsResult:
         assert isinstance(result, ResourceLinkContent)
         assert result.uri == "file://test.txt"
         assert result.name == "Test Resource"
+        assert result.title == "Test Resource Title"
         assert result.description == "A test resource"
         assert result.mimeType == "text/plain"
 

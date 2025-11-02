@@ -111,32 +111,24 @@ class ResourceSchemaAssembler(FeatureSchemaAssembler):
         if not isinstance(resource_result, ResourceResult):
             raise self.UnsupportedResultTypeError(type(resource_result))
 
-        content_schema_list = []
-        if len(resource_result.content_list) == 1:
-            content = resource_result.content_list[0]
+        content_list = resource_result.content_list.copy()
 
+        for content in content_list:
             # get info from content/registry/metadata
-            name = content.name or resource_registry.extra.get("name")
-            title = content.title or resource_registry.extra.get("title")
-            if hasattr(resource_registry, "metadata"):
-                name = name or resource_registry.metadata.name
-                title = title or resource_registry.metadata.title
-
-            updated_content = content.model_copy(
-                update={
-                    "uri": content.uri or resource_registry.uri,
-                    "name": name,
-                    "title": title,
-                    "annotations": content.annotations
-                    or resource_registry.extra.get("annotations"),
-                }
+            content.uri = content.uri or resource_registry.uri
+            content.name = content.name or resource_registry.extra.get("name")
+            content.title = content.title or resource_registry.extra.get("title")
+            content.annotations = content.annotations or resource_registry.extra.get(
+                "annotations"
             )
 
-            content_schema_list.append(updated_content)
+            if hasattr(resource_registry, "metadata"):
+                content.name = content.name or resource_registry.metadata.name
+                content.title = content.title or resource_registry.metadata.title
 
-        else:
-            content_schema_list = resource_result.content_list
+            # only update the first content
+            break
 
-        result_schema = ResultSchema(contents=content_schema_list)
+        result_schema = ResultSchema(contents=content_list)
         result_schema = self._build_non_none_dict(result_schema)
         return result_schema

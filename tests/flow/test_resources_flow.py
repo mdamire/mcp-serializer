@@ -230,7 +230,9 @@ def test_resources_read_request():
 def test_file_resource():
     """Test reading a file-based resource."""
     # Get the URI for the temp file from the registry
-    resource_list = serializer.registry.resource_container.schema_assembler.resource_list
+    resource_list = (
+        serializer.registry.resource_container.schema_assembler.resource_list
+    )
     temp_resource = None
     for resource in resource_list:
         if resource.uri.startswith("file://") and ".json" in resource.uri:

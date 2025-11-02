@@ -83,7 +83,11 @@ class PromptsSchemaAssembler(FeatureSchemaAssembler):
 
     def process_result(self, result: PromptsResult, registry):
         """Process the result from prompt function calls."""
-        from .container import PromptRegistry, ResultRegistry
+        from .container import PromptRegistry
+
+        description = registry.extra.get("description")
+        if isinstance(registry, PromptRegistry) and not description:
+            description = registry.metadata.description
 
         if isinstance(result, str):
             prompts = PromptsResult()
@@ -96,13 +100,14 @@ class PromptsSchemaAssembler(FeatureSchemaAssembler):
             messages = prompts.messages
         elif isinstance(result, PromptsResult):
             messages = result.messages
+            description = result.description or description
         else:
             raise self.UnsupportedResultTypeError(
                 f"Unsupported result type: {type(result)}"
             )
 
         result_schema = PromptResultSchema(
-            description=result.description,
+            description=description,
             messages=messages,
         )
         return self._build_non_none_dict(result_schema)

@@ -145,9 +145,7 @@ def documentation_prompt(section: str):
     result.add_file_message(file=temp_md_file_path, role=PromptsResult.Roles.USER)
 
     # Add file as embedded resource (using file path)
-    result.add_file_resource(
-        file=temp_json_file_path, role=PromptsResult.Roles.USER
-    )
+    result.add_file_resource(file=temp_json_file_path, role=PromptsResult.Roles.USER)
 
     return result
 
@@ -315,8 +313,7 @@ def test_static_text_prompts():
     assert len(response["result"]["messages"]) == 1
     assert response["result"]["messages"][0]["role"] == "user"
     assert (
-        "Welcome to our service"
-        in response["result"]["messages"][0]["content"]["text"]
+        "Welcome to our service" in response["result"]["messages"][0]["content"]["text"]
     )
     assert response["result"]["description"] == "A welcoming prompt for users"
 
@@ -334,9 +331,7 @@ def test_static_text_prompts():
     assert "result" in response
     assert response["result"]["messages"][0]["role"] == "assistant"
     assert "# Quick Guide" in response["result"]["messages"][0]["content"]["text"]
-    assert (
-        response["result"]["messages"][0]["content"]["mimeType"] == "text/markdown"
-    )
+    assert response["result"]["messages"][0]["content"]["mimeType"] == "text/markdown"
 
 
 def test_file_based_prompts():
@@ -376,9 +371,7 @@ def test_file_based_prompts():
     assert "result" in response
     assert response["result"]["messages"][0]["role"] == "assistant"
     assert "# Documentation" in response["result"]["messages"][0]["content"]["text"]
-    assert (
-        response["result"]["messages"][0]["content"]["mimeType"] == "text/markdown"
-    )
+    assert response["result"]["messages"][0]["content"]["mimeType"] == "text/markdown"
 
     # Test file object prompt (BinaryIO)
     request = {
@@ -420,7 +413,9 @@ def test_prompt_with_file_methods():
 
     # First message - text
     assert response["result"]["messages"][0]["role"] == "user"
-    assert "documentation for API" in response["result"]["messages"][0]["content"]["text"]
+    assert (
+        "documentation for API" in response["result"]["messages"][0]["content"]["text"]
+    )
 
     # Second message - file content via add_file_message (file path)
     assert response["result"]["messages"][1]["role"] == "user"

@@ -63,6 +63,7 @@ class ResourceLinkContent(BaseModel):
     type: str = "resource_link"
     uri: str
     name: Optional[str] = None
+    title: Optional[str] = None
     description: Optional[str] = None
     mimeType: Optional[str] = None
     annotations: Optional[Dict[str, Any]] = None

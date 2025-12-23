@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock, patch
 from mcp_serializer.features.base.container import FeatureContainer
 from mcp_serializer.features.base.definitions import FunctionMetadata, ArgumentMetadata
-from mcp_serializer.features.base.schema import JsonSchemaTypes
+from mcp_serializer.features.base import schema as schema_module
 
 
 class TestFeatureContainer:
@@ -60,7 +60,7 @@ class TestFeatureContainer:
 
         kwargs = {"x": "123"}
 
-        with patch.object(JsonSchemaTypes, "cast_python_type", return_value=123):
+        with patch.object(schema_module, "cast_python_type", return_value=123):
             result = self.container._validate_parameters(func_metadata, kwargs)
             assert result == {"x": 123}
 
@@ -92,7 +92,7 @@ class TestFeatureContainer:
         kwargs = {"x": "invalid"}
 
         with patch.object(
-            JsonSchemaTypes, "cast_python_type", side_effect=ValueError("Invalid")
+            schema_module, "cast_python_type", side_effect=ValueError("Invalid")
         ):
             with pytest.raises(FeatureContainer.ParameterTypeCastingError) as exc_info:
                 self.container._validate_parameters(func_metadata, kwargs)

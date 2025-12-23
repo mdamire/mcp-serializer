@@ -6,7 +6,6 @@ import base64
 
 class ArgumentSchema(BaseModel):
     name: str
-    type: str
     description: Optional[str] = None
     required: bool = True
 

@@ -6,7 +6,6 @@ from .schema import (
     PromptResultSchema,
 )
 from ..base.assembler import FeatureSchemaAssembler
-from ..base.schema import JsonSchemaTypes
 from .result import PromptsResult
 from ..base.pagination import Pagination
 from ..base.definitions import FunctionMetadata
@@ -52,10 +51,8 @@ class PromptsSchemaAssembler(FeatureSchemaAssembler):
 
         arguments = []
         for arg in metadata.arguments:
-            json_type = JsonSchemaTypes.from_python_type(arg.type_hint)
             arg_schema = ArgumentSchema(
                 name=arg.name,
-                type=json_type,
                 description=arg.description,
                 required=arg.required,
             )

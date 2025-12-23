@@ -1,6 +1,6 @@
 from .parsers import FunctionParser
 from .definitions import FunctionMetadata
-from .schema import JsonSchemaTypes
+from .schema import cast_python_type
 
 
 class FeatureContainer:
@@ -65,7 +65,7 @@ class FeatureContainer:
             if param_name in kwargs:
                 try:
                     # There will be always a type hint for the parameter as the parser sets a default type hint
-                    validated_params[param_name] = JsonSchemaTypes.cast_python_type(
+                    validated_params[param_name] = cast_python_type(
                         kwargs[param_name], param_type
                     )
                 except Exception as e:

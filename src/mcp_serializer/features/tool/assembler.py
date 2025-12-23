@@ -1,11 +1,13 @@
 from typing import Optional
 from pydantic import BaseModel
+from pydantic_core import PydanticUndefined
 import inspect
 from ..base.pagination import Pagination
 from .schema import ToolsDefinitionSchema, ToolsListSchema, ResultSchema, TextContent
 from ..base.assembler import FeatureSchemaAssembler
-from ..base.schema import JsonSchema, JsonSchemaTypes
+from ..base.schema import JsonSchema
 from .result import ToolsResult
+from ..base.definitions import FunctionMetadata
 
 
 class ToolsSchemaAssembler(FeatureSchemaAssembler):
@@ -45,12 +47,14 @@ class ToolsSchemaAssembler(FeatureSchemaAssembler):
         input_schema = JsonSchema()
 
         for arg in metadata.arguments:
-            json_type = JsonSchemaTypes.from_python_type(arg.type_hint)
+            has_default = arg.default is not FunctionMetadata.empty
             input_schema.add_property(
                 name=arg.name,
-                prop_type=json_type,
+                type_hint=arg.type_hint,
                 description=arg.description,
                 required=arg.required,
+                default=arg.default if has_default else None,
+                has_default=has_default,
             )
 
         return input_schema
@@ -75,15 +79,14 @@ class ToolsSchemaAssembler(FeatureSchemaAssembler):
             # Get fields from Pydantic model
             if hasattr(metadata.return_type, "model_fields"):
                 for field_name, field_info in metadata.return_type.model_fields.items():
-                    json_type = JsonSchemaTypes.from_python_type(field_info.annotation)
-                    is_required = field_info.is_required()
-                    description = field_info.description
-
+                    has_default = field_info.default is not PydanticUndefined
                     output_schema.add_property(
                         name=field_name,
-                        prop_type=json_type,
-                        description=description,
-                        required=is_required,
+                        type_hint=field_info.annotation,
+                        description=field_info.description,
+                        required=field_info.is_required(),
+                        default=field_info.default if has_default else None,
+                        has_default=has_default,
                     )
 
             return output_schema

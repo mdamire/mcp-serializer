@@ -384,6 +384,7 @@ def test_tools_list():
                             "days": {
                                 "type": "integer",
                                 "description": "Number of days to forecast (default: 3)",
+                                "default": 3,
                             },
                         },
                         "required": ["city"],
@@ -526,7 +527,7 @@ def test_prompts_list():
                     "name": "greeting_prompt",
                     "title": "Greeting prompt",
                     "description": "This prompt helps to greet a user.",
-                    "arguments": [{"name": "name", "type": "string", "required": True}],
+                    "arguments": [{"name": "name", "required": True}],
                 },
             ],
         },

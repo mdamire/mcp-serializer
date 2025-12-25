@@ -12,8 +12,7 @@ class RPCError:
     def get_response(self, rpc_request: Optional[JsonRpcRequest]) -> dict:
         id = rpc_request.id if rpc_request is not None else None
         rpc_error = JsonRpcError(code=self.code, message=self.message, data=self.data)
-        response_data = JsonRpcErrorResponse(id=id, error=rpc_error).model_dump()
-        return response_data
+        return JsonRpcErrorResponse(id=id, error=rpc_error)
 
     def _build_error_data(self, error: Exception) -> dict:
         # Get full traceback including exception type and message

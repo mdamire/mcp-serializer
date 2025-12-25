@@ -14,6 +14,7 @@ from .initializer import MCPInitializer
 from . import errors
 from .features.base.container import FeatureContainer
 from .features.base.assembler import FeatureSchemaAssembler
+from .contexts import ResponseContext
 
 
 class RPCRequestManager:
@@ -197,14 +198,14 @@ class RPCRequestManager:
             raise ValueError(f"Invalid result type: {type(result)}")
         return result
 
-    def _process_single_result(self, rpc_request: JsonRpcRequest) -> Union[dict, None]:
-        """It should return a rpc result object."""
-        processor_mapping = self._get_processor_mapping()
-
+    def _get_request_result(self, rpc_request: JsonRpcRequest) -> Union[dict, None]:
+        """It creates result from a rpc request."""
         # log if notification
         if rpc_request.id is None:
             get_logger().info(f"Notification: {rpc_request.method}")
             return None
+
+        processor_mapping = self._get_processor_mapping()
 
         # prepare processor
         try:
@@ -227,20 +228,14 @@ class RPCRequestManager:
 
         return result
 
-    def _build_success_response(
-        self, rpc_request: JsonRpcRequest, result: dict
-    ) -> JsonRpcSuccessResponse:
-        if hasattr(result, "model_dump"):
-            result = result.model_dump()
-        response = JsonRpcSuccessResponse(id=rpc_request.id, result=result).model_dump()
-        return response
-
-    def _process_single_request(self, rpc_request: JsonRpcRequest) -> Union[dict, None]:
+    def _process_single_request(
+        self, rpc_request: JsonRpcRequest
+    ) -> Union[JsonRpcErrorResponse, JsonRpcSuccessResponse, None]:
         try:
-            result = self._process_single_result(rpc_request)
+            result = self._get_request_result(rpc_request)
             response = (
-                self._build_success_response(rpc_request, result)
-                if result is not None
+                JsonRpcSuccessResponse(id=rpc_request.id, result=result)
+                if result
                 else None
             )
         except Exception as e:
@@ -255,20 +250,20 @@ class RPCRequestManager:
                 error = errors.InternalError(e)
             response = error.get_response(rpc_request)
 
-        response_dict = FeatureSchemaAssembler()._build_non_none_dict(response)
-        return response_dict
+        return response
 
     def process_request(
         self, rpc_request: Union[JsonRpcRequest, List[JsonRpcRequest]]
-    ) -> Union[JsonRpcSuccessResponse, JsonRpcErrorResponse]:
+    ) -> ResponseContext:
+        response_context = ResponseContext()
+
         if isinstance(rpc_request, list):
-            response_list = []
             for request in rpc_request:
                 response = self._process_single_request(request)
-                if response is not None:
-                    response_list.append(response)
+                response_context.add_context(response, request)
 
-            return response_list if response_list else None
+            return response_context
 
         response = self._process_single_request(rpc_request)
-        return response
+        response_context.add_context(response, rpc_request)
+        return response_context

@@ -122,4 +122,5 @@ class ToolsSchemaAssembler(FeatureSchemaAssembler):
             result_schema.content = [TextContent(text=result).model_dump()]
         else:
             raise self.UnsupportedResultTypeError(type(result))
+
         return self._build_non_none_dict(result_schema)

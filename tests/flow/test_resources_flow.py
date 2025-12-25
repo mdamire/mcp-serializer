@@ -133,14 +133,17 @@ def test_initialize_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert response["jsonrpc"] == "2.0"
-    assert response["id"] == 1
-    assert "result" in response
-    assert response["result"]["protocolVersion"] == "2024-11-05"
-    assert "serverInfo" in response["result"]
-    assert response["result"]["serverInfo"]["name"] == "test-mcp-server-resources"
-    assert "capabilities" in response["result"]
-    assert "resources" in response["result"]["capabilities"]
+    assert response.response_data["jsonrpc"] == "2.0"
+    assert response.response_data["id"] == 1
+    assert "result" in response.response_data
+    assert response.response_data["result"]["protocolVersion"] == "2024-11-05"
+    assert "serverInfo" in response.response_data["result"]
+    assert (
+        response.response_data["result"]["serverInfo"]["name"]
+        == "test-mcp-server-resources"
+    )
+    assert "capabilities" in response.response_data["result"]
+    assert "resources" in response.response_data["result"]["capabilities"]
 
 
 def test_resources_list_request():
@@ -150,20 +153,24 @@ def test_resources_list_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert response["jsonrpc"] == "2.0"
-    assert response["id"] == 5
-    assert "result" in response
-    assert "resources" in response["result"]
+    assert response.response_data["jsonrpc"] == "2.0"
+    assert response.response_data["id"] == 5
+    assert "result" in response.response_data
+    assert "resources" in response.response_data["result"]
     assert (
-        len(response["result"]["resources"]) == 4
+        len(response.response_data["result"]["resources"]) == 4
     )  # README, api_data, get_style and temp file
 
-    resource_names = [res["name"] for res in response["result"]["resources"]]
+    resource_names = [
+        res["name"] for res in response.response_data["result"]["resources"]
+    ]
     assert "readme" in resource_names
     assert "api_data" in resource_names
     assert "get_style" in resource_names
 
-    resource_urls = [res["uri"] for res in response["result"]["resources"]]
+    resource_urls = [
+        res["uri"] for res in response.response_data["result"]["resources"]
+    ]
     assert "file:///README.md" in resource_urls
     assert "https://example.com/api/data" in resource_urls
     # Temp file URI will be file://<temp_path>
@@ -181,13 +188,13 @@ def test_resource_template_list_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert response["jsonrpc"] == "2.0"
-    assert response["id"] == 6
-    assert "result" in response
-    assert "resourceTemplates" in response["result"]
-    assert len(response["result"]["resourceTemplates"]) == 2
+    assert response.response_data["jsonrpc"] == "2.0"
+    assert response.response_data["id"] == 6
+    assert "result" in response.response_data
+    assert "resourceTemplates" in response.response_data["result"]
+    assert len(response.response_data["result"]["resourceTemplates"]) == 2
     resource_template_urls = [
-        res["uri"] for res in response["result"]["resourceTemplates"]
+        res["uri"] for res in response.response_data["result"]["resourceTemplates"]
     ]
     assert r"resource/config/{config_name}" in resource_template_urls
     assert r"resource/settings/{setting_name}/{setting_type}" in resource_template_urls
@@ -206,11 +213,11 @@ def test_resources_read_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert response["jsonrpc"] == "2.0"
-    assert response["id"] == 6
-    assert "result" in response
-    assert "contents" in response["result"]
-    assert "MCP Serializer" in str(response["result"])
+    assert response.response_data["jsonrpc"] == "2.0"
+    assert response.response_data["id"] == 6
+    assert "result" in response.response_data
+    assert "contents" in response.response_data["result"]
+    assert "MCP Serializer" in str(response.response_data["result"])
 
     # Test reading template resource with parameters
     request = {
@@ -223,8 +230,8 @@ def test_resources_read_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "result" in response
-    assert "Config: app" in str(response["result"])
+    assert "result" in response.response_data
+    assert "Config: app" in str(response.response_data["result"])
 
 
 def test_file_resource():
@@ -252,10 +259,10 @@ def test_file_resource():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "result" in response
-    assert "contents" in response["result"]
-    assert len(response["result"]["contents"]) == 1
-    content = response["result"]["contents"][0]
+    assert "result" in response.response_data
+    assert "contents" in response.response_data["result"]
+    assert len(response.response_data["result"]["contents"]) == 1
+    content = response.response_data["result"]["contents"][0]
     assert content["mimeType"] == "application/json"
     assert '"test": "data"' in content["text"]
 
@@ -272,12 +279,13 @@ def test_batch_request():
         },
     ]
 
-    responses = serializer.process_request(batch_request)
+    response_context = serializer.process_request(batch_request)
 
-    assert responses is not None
-    assert isinstance(responses, list)
-    assert len(responses) == 2
-    assert all("result" in resp for resp in responses)
+    assert response_context is not None
+    assert isinstance(response_context.response_data, list)
+    assert len(response_context.response_data) == 2
+    assert len(response_context.history) == 2
+    assert all("result" in resp for resp in response_context.response_data)
 
 
 def test_cleanup():

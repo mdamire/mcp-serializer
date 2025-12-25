@@ -67,7 +67,7 @@ registry.add_http_resource(
 
 # For complex cases, register a resource using a function that returns a ResourceResult object.
 # Functions with parameters create resource templates with URI placeholders.
-from mcp_serializer.features.resource.result import ResourceResult
+from mcp_serializer.results import ResourceResult
 
 
 @registry.resource(uri="resource/weather/")
@@ -148,7 +148,7 @@ def get_current_weather(city: str) -> WeatherReport:
 # The Pydantic model will be automatically converted to an output schema in the tool definition.
 
 # For complex responses with multiple content types, return a ToolsResult object.
-from mcp_serializer.features.tool.result import ToolsResult
+from mcp_serializer.results import ToolsResult
 
 
 @registry.tool()
@@ -201,7 +201,7 @@ registry.add_file_prompt(
 # You can supply title and description as parameters for these registration methods. These are useful for the client to understand the prompt.
 
 ## A function can be registered to create a prompt. It can return a string, a tuple (text, role) or a PromptsResult object.
-from mcp_serializer.features.prompt.result import PromptsResult
+from mcp_serializer.results import PromptsResult
 
 
 @registry.prompt()
@@ -252,8 +252,15 @@ from mcp_serializer.serializers import MCPSerializer
 serializer = MCPSerializer(initializer=initializer, registry=registry, page_size=10)
 # the page_size is the number of items to return in a single page for listing features.
 
-# The process_request method takes a JSON-RPC request and returns a JSON-RPC response object.
-# It also takes care of any error response or batch requests.
+# The process_request method takes a JSON-RPC request and returns a ResponseContext object.
+# ResponseContext contains:
+#   - response_data: The actual JSON-RPC response (dict or list of dicts for batch)
+#   - history: List of ResponseEntry objects, each containing:
+#       - response: The Pydantic response object (JsonRpcSuccessResponse or JsonRpcErrorResponse)
+#       - request: The Pydantic request object (JsonRpcRequest)
+#       - data: The response as a dict (same as response_data for single requests)
+#       - is_error: Boolean property indicating if this is an error response
+#       - is_notification: Boolean property indicating if this was a notification (no response)
 response = serializer.process_request(
     request_data={
         "jsonrpc": "2.0",
@@ -266,6 +273,16 @@ response = serializer.process_request(
     }
 )
 # request_data parameter can be a dict or a JSON string.
+
+# Access response data directly
+response_dict = response.response_data
+
+# Or access through history for more details
+first_entry = response.history[0]
+if first_entry.is_error:
+    print("Error occurred:", first_entry.data["error"])
+if first_entry.is_notification:
+    print("This was a notification")
 
 
 ### 7. Tests
@@ -305,7 +322,7 @@ def test_initialize():
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
 
 def test_tools_list():
@@ -394,7 +411,7 @@ def test_tools_list():
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
 
 def test_tools_call():
@@ -428,7 +445,7 @@ def test_tools_call():
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
     # Test 2: get_current_weather - Pydantic BaseModel return
     request = {
@@ -449,15 +466,16 @@ def test_tools_call():
         "jsonrpc": "2.0",
         "id": 3,
         "result": {
+            "content": [],
             "structuredContent": {
                 "condition": "sunny",
                 "humidity": 65.0,
                 "temperature": 72.5,
-            }
+            },
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
     # Test 3: get_weather_forecast - ToolsResult with text, file, and resource link
     request = {
@@ -501,7 +519,7 @@ def test_tools_call():
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
 
 def test_prompts_list():
@@ -533,7 +551,7 @@ def test_prompts_list():
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
 
 def test_prompts_get():
@@ -560,7 +578,7 @@ def test_prompts_get():
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
 
 def test_prompts_get_with_arguments():
@@ -609,7 +627,7 @@ def test_prompts_get_with_arguments():
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
 
 def test_resources_list():
@@ -642,7 +660,7 @@ def test_resources_list():
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
 
 def test_resources_templates_list():
@@ -671,7 +689,7 @@ def test_resources_templates_list():
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
 
 def test_resources_read():
@@ -703,7 +721,7 @@ def test_resources_read():
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
     # Test 2: Read resource template with parameters (returns multiple contents)
     request = {
@@ -738,7 +756,7 @@ def test_resources_read():
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
 
 def test_error_invalid_method():
@@ -757,7 +775,7 @@ def test_error_invalid_method():
         },
     }
 
-    assert response == expected_response
+    assert response.response_data == expected_response
 
 
 def test_batch_request():
@@ -768,9 +786,16 @@ def test_batch_request():
         {"jsonrpc": "2.0", "id": 15, "method": "resources/list", "params": {}},
     ]
 
-    responses = serializer.process_request(batch_request)
-    assert len(responses) == 3
+    response_context = serializer.process_request(batch_request)
 
-    assert responses[0]["id"] == 13
-    assert responses[1]["id"] == 14
-    assert responses[2]["id"] == 15
+    # For batch requests, response_data is a list
+    assert isinstance(response_context.response_data, list)
+    assert len(response_context.response_data) == 3
+
+    # Check history has 3 entries
+    assert len(response_context.history) == 3
+
+    # Verify each response
+    assert response_context.response_data[0]["id"] == 13
+    assert response_context.response_data[1]["id"] == 14
+    assert response_context.response_data[2]["id"] == 15

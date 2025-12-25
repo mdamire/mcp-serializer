@@ -75,6 +75,6 @@ class EmbeddedResource(BaseModel):
 
 
 class ResultSchema(BaseModel):
-    content: Optional[List[dict]] = None
+    content: Optional[List[dict]] = []
     structuredContent: Optional[dict] = None
     isError: Optional[bool] = None

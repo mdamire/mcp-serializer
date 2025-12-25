@@ -162,7 +162,7 @@ class FunctionParser:
 
         # NumPy style: Parameters followed by dashes
         numpy_match = re.search(
-            r"Parameters\s*\n\s*-+\s*\n(.*?)(?:\n[A-Z][a-z]*\s*\n\s*-+|\Z)",
+            r"Parameters\s*\n\s*-+\s*\n(.*?)(?:\n+[A-Z][a-z]*\s*\n\s*-+|\Z)",
             docstring,
             re.DOTALL | re.IGNORECASE,
         )
@@ -170,7 +170,7 @@ class FunctionParser:
             params_section = numpy_match.group(1)
             # Match param_name : type and description on next lines
             for match in re.finditer(
-                r"^(\w+)\s*:.*?\n(.*?)(?=^\w+\s*:|$)",
+                r"^\s*(\w+)\s*:.*?\n(.*?)(?=^\s*\w+\s*:|$)",
                 params_section,
                 re.MULTILINE | re.DOTALL,
             ):

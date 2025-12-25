@@ -89,14 +89,17 @@ def test_initialize_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert response["jsonrpc"] == "2.0"
-    assert response["id"] == 1
-    assert "result" in response
-    assert response["result"]["protocolVersion"] == "2024-11-05"
-    assert "serverInfo" in response["result"]
-    assert response["result"]["serverInfo"]["name"] == "test-mcp-server-tools"
-    assert "capabilities" in response["result"]
-    assert "tools" in response["result"]["capabilities"]
+    assert response.response_data["jsonrpc"] == "2.0"
+    assert response.response_data["id"] == 1
+    assert "result" in response.response_data
+    assert response.response_data["result"]["protocolVersion"] == "2024-11-05"
+    assert "serverInfo" in response.response_data["result"]
+    assert (
+        response.response_data["result"]["serverInfo"]["name"]
+        == "test-mcp-server-tools"
+    )
+    assert "capabilities" in response.response_data["result"]
+    assert "tools" in response.response_data["result"]["capabilities"]
 
 
 def test_tools_list_request():
@@ -106,13 +109,13 @@ def test_tools_list_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert response["jsonrpc"] == "2.0"
-    assert response["id"] == 2
-    assert "result" in response
-    assert "tools" in response["result"]
-    assert len(response["result"]["tools"]) == 3
+    assert response.response_data["jsonrpc"] == "2.0"
+    assert response.response_data["id"] == 2
+    assert "result" in response.response_data
+    assert "tools" in response.response_data["result"]
+    assert len(response.response_data["result"]["tools"]) == 3
 
-    tool_names = [tool["name"] for tool in response["result"]["tools"]]
+    tool_names = [tool["name"] for tool in response.response_data["result"]["tools"]]
     assert "add_numbers" in tool_names
     assert "echo" in tool_names
     assert "get_weather" in tool_names
@@ -131,11 +134,11 @@ def test_tools_call_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert response["jsonrpc"] == "2.0"
-    assert response["id"] == 3
-    assert "result" in response
-    assert "content" in response["result"]
-    assert "30" in str(response["result"]["content"])
+    assert response.response_data["jsonrpc"] == "2.0"
+    assert response.response_data["id"] == 3
+    assert "result" in response.response_data
+    assert "content" in response.response_data["result"]
+    assert "30" in str(response.response_data["result"]["content"])
 
     # Test echo with uppercase
     request = {
@@ -151,8 +154,8 @@ def test_tools_call_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "result" in response
-    assert "HELLO WORLD" in str(response["result"]["content"])
+    assert "result" in response.response_data
+    assert "HELLO WORLD" in str(response.response_data["result"]["content"])
 
 
 def test_error_handling():
@@ -163,8 +166,8 @@ def test_error_handling():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "error" in response
-    assert response["error"]["code"] == -32601  # Method not found
+    assert "error" in response.response_data
+    assert response.response_data["error"]["code"] == -32601  # Method not found
 
     # Test tool not found
     request = {
@@ -177,8 +180,8 @@ def test_error_handling():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "error" in response
-    assert response["error"]["code"] == -32002  # Tools not found
+    assert "error" in response.response_data
+    assert response.response_data["error"]["code"] == -32002  # Tools not found
 
     # Test missing required parameter
     request = {
@@ -194,18 +197,20 @@ def test_error_handling():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "error" in response
-    assert response["error"]["code"] == -32602  # Invalid params
+    assert "error" in response.response_data
+    assert response.response_data["error"]["code"] == -32602  # Invalid params
 
 
 def test_notification():
     """Test notification (request without id)."""
     request = {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
 
-    response = serializer.process_request(request)
+    response_context = serializer.process_request(request)
 
     # Notifications should not return a response
-    assert response is None
+    assert len(response_context.history) == 1
+    assert response_context.history[0].is_notification
+    assert response_context.response_data is None
 
 
 def test_json_string_request():
@@ -217,9 +222,9 @@ def test_json_string_request():
     response = serializer.process_request(request_str)
 
     assert response is not None
-    assert response["jsonrpc"] == "2.0"
-    assert response["id"] == 17
-    assert "result" in response
+    assert response.response_data["jsonrpc"] == "2.0"
+    assert response.response_data["id"] == 17
+    assert "result" in response.response_data
 
 
 def test_batch_request():
@@ -234,9 +239,10 @@ def test_batch_request():
         },
     ]
 
-    responses = serializer.process_request(batch_request)
+    response_context = serializer.process_request(batch_request)
 
-    assert responses is not None
-    assert isinstance(responses, list)
-    assert len(responses) == 2
-    assert all("result" in resp for resp in responses)
+    assert response_context is not None
+    assert isinstance(response_context.response_data, list)
+    assert len(response_context.response_data) == 2
+    assert len(response_context.history) == 2
+    assert all("result" in resp for resp in response_context.response_data)

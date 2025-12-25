@@ -214,14 +214,17 @@ def test_initialize_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert response["jsonrpc"] == "2.0"
-    assert response["id"] == 1
-    assert "result" in response
-    assert response["result"]["protocolVersion"] == "2024-11-05"
-    assert "serverInfo" in response["result"]
-    assert response["result"]["serverInfo"]["name"] == "test-mcp-server-prompts"
-    assert "capabilities" in response["result"]
-    assert "prompts" in response["result"]["capabilities"]
+    assert response.response_data["jsonrpc"] == "2.0"
+    assert response.response_data["id"] == 1
+    assert "result" in response.response_data
+    assert response.response_data["result"]["protocolVersion"] == "2024-11-05"
+    assert "serverInfo" in response.response_data["result"]
+    assert (
+        response.response_data["result"]["serverInfo"]["name"]
+        == "test-mcp-server-prompts"
+    )
+    assert "capabilities" in response.response_data["result"]
+    assert "prompts" in response.response_data["result"]["capabilities"]
 
 
 def test_prompts_list_request():
@@ -231,16 +234,18 @@ def test_prompts_list_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert response["jsonrpc"] == "2.0"
-    assert response["id"] == 8
-    assert "result" in response
-    assert "prompts" in response["result"]
-    assert len(response["result"]["prompts"]) == 10
+    assert response.response_data["jsonrpc"] == "2.0"
+    assert response.response_data["id"] == 8
+    assert "result" in response.response_data
+    assert "prompts" in response.response_data["result"]
+    assert len(response.response_data["result"]["prompts"]) == 10
     # greeting, code_review, summarize, welcome, markdown_guide,
     # file_instruction, markdown_file_guide, file_object_instruction,
     # documentation_prompt, file_object_prompt
 
-    prompt_names = [prompt["name"] for prompt in response["result"]["prompts"]]
+    prompt_names = [
+        prompt["name"] for prompt in response.response_data["result"]["prompts"]
+    ]
     assert "greeting" in prompt_names
     assert "code_review_prompt" in prompt_names
     assert "summarize" in prompt_names
@@ -266,12 +271,11 @@ def test_prompts_get_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert type(response) == dict
-    assert response["jsonrpc"] == "2.0"
-    assert response["id"] == 9
-    assert "result" in response
-    assert "messages" in response["result"]
-    assert "Hello" in str(response["result"]["messages"])
+    assert response.response_data["jsonrpc"] == "2.0"
+    assert response.response_data["id"] == 9
+    assert "result" in response.response_data
+    assert "messages" in response.response_data["result"]
+    assert "Hello" in str(response.response_data["result"]["messages"])
 
     # Test code review prompt with parameters
     request = {
@@ -290,9 +294,9 @@ def test_prompts_get_request():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "result" in response
-    assert "messages" in response["result"]
-    assert "Python" in str(response["result"]["messages"])
+    assert "result" in response.response_data
+    assert "messages" in response.response_data["result"]
+    assert "Python" in str(response.response_data["result"]["messages"])
 
 
 def test_static_text_prompts():
@@ -308,14 +312,18 @@ def test_static_text_prompts():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "result" in response
-    assert "messages" in response["result"]
-    assert len(response["result"]["messages"]) == 1
-    assert response["result"]["messages"][0]["role"] == "user"
+    assert "result" in response.response_data
+    assert "messages" in response.response_data["result"]
+    assert len(response.response_data["result"]["messages"]) == 1
+    assert response.response_data["result"]["messages"][0]["role"] == "user"
     assert (
-        "Welcome to our service" in response["result"]["messages"][0]["content"]["text"]
+        "Welcome to our service"
+        in response.response_data["result"]["messages"][0]["content"]["text"]
     )
-    assert response["result"]["description"] == "A welcoming prompt for users"
+    assert (
+        response.response_data["result"]["description"]
+        == "A welcoming prompt for users"
+    )
 
     # Test markdown guide prompt
     request = {
@@ -328,10 +336,16 @@ def test_static_text_prompts():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "result" in response
-    assert response["result"]["messages"][0]["role"] == "assistant"
-    assert "# Quick Guide" in response["result"]["messages"][0]["content"]["text"]
-    assert response["result"]["messages"][0]["content"]["mimeType"] == "text/markdown"
+    assert "result" in response.response_data
+    assert response.response_data["result"]["messages"][0]["role"] == "assistant"
+    assert (
+        "# Quick Guide"
+        in response.response_data["result"]["messages"][0]["content"]["text"]
+    )
+    assert (
+        response.response_data["result"]["messages"][0]["content"]["mimeType"]
+        == "text/markdown"
+    )
 
 
 def test_file_based_prompts():
@@ -347,15 +361,18 @@ def test_file_based_prompts():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "result" in response
-    assert "messages" in response["result"]
-    assert len(response["result"]["messages"]) == 1
-    assert response["result"]["messages"][0]["role"] == "user"
+    assert "result" in response.response_data
+    assert "messages" in response.response_data["result"]
+    assert len(response.response_data["result"]["messages"]) == 1
+    assert response.response_data["result"]["messages"][0]["role"] == "user"
     assert (
         "sample instruction from a text file"
-        in response["result"]["messages"][0]["content"]["text"]
+        in response.response_data["result"]["messages"][0]["content"]["text"]
     )
-    assert response["result"]["messages"][0]["content"]["mimeType"] == "text/plain"
+    assert (
+        response.response_data["result"]["messages"][0]["content"]["mimeType"]
+        == "text/plain"
+    )
 
     # Test markdown file prompt (file path)
     request = {
@@ -368,10 +385,16 @@ def test_file_based_prompts():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "result" in response
-    assert response["result"]["messages"][0]["role"] == "assistant"
-    assert "# Documentation" in response["result"]["messages"][0]["content"]["text"]
-    assert response["result"]["messages"][0]["content"]["mimeType"] == "text/markdown"
+    assert "result" in response.response_data
+    assert response.response_data["result"]["messages"][0]["role"] == "assistant"
+    assert (
+        "# Documentation"
+        in response.response_data["result"]["messages"][0]["content"]["text"]
+    )
+    assert (
+        response.response_data["result"]["messages"][0]["content"]["mimeType"]
+        == "text/markdown"
+    )
 
     # Test file object prompt (BinaryIO)
     request = {
@@ -384,15 +407,18 @@ def test_file_based_prompts():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "result" in response
-    assert "messages" in response["result"]
-    assert len(response["result"]["messages"]) == 1
-    assert response["result"]["messages"][0]["role"] == "user"
+    assert "result" in response.response_data
+    assert "messages" in response.response_data["result"]
+    assert len(response.response_data["result"]["messages"]) == 1
+    assert response.response_data["result"]["messages"][0]["role"] == "user"
     assert (
         "sample instruction from a text file"
-        in response["result"]["messages"][0]["content"]["text"]
+        in response.response_data["result"]["messages"][0]["content"]["text"]
     )
-    assert response["result"]["messages"][0]["content"]["mimeType"] == "text/plain"
+    assert (
+        response.response_data["result"]["messages"][0]["content"]["mimeType"]
+        == "text/plain"
+    )
 
 
 def test_prompt_with_file_methods():
@@ -407,26 +433,35 @@ def test_prompt_with_file_methods():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "result" in response
-    assert "messages" in response["result"]
-    assert len(response["result"]["messages"]) == 3
+    assert "result" in response.response_data
+    assert "messages" in response.response_data["result"]
+    assert len(response.response_data["result"]["messages"]) == 3
 
     # First message - text
-    assert response["result"]["messages"][0]["role"] == "user"
+    assert response.response_data["result"]["messages"][0]["role"] == "user"
     assert (
-        "documentation for API" in response["result"]["messages"][0]["content"]["text"]
+        "documentation for API"
+        in response.response_data["result"]["messages"][0]["content"]["text"]
     )
 
     # Second message - file content via add_file_message (file path)
-    assert response["result"]["messages"][1]["role"] == "user"
-    assert response["result"]["messages"][1]["content"]["type"] == "text"
-    assert "# Documentation" in response["result"]["messages"][1]["content"]["text"]
-    assert response["result"]["messages"][1]["content"]["mimeType"] == "text/markdown"
+    assert response.response_data["result"]["messages"][1]["role"] == "user"
+    assert response.response_data["result"]["messages"][1]["content"]["type"] == "text"
+    assert (
+        "# Documentation"
+        in response.response_data["result"]["messages"][1]["content"]["text"]
+    )
+    assert (
+        response.response_data["result"]["messages"][1]["content"]["mimeType"]
+        == "text/markdown"
+    )
 
     # Third message - embedded resource via add_file_resource (file path)
-    assert response["result"]["messages"][2]["role"] == "user"
-    assert response["result"]["messages"][2]["content"]["type"] == "resource"
-    resource = response["result"]["messages"][2]["content"]["resource"]
+    assert response.response_data["result"]["messages"][2]["role"] == "user"
+    assert (
+        response.response_data["result"]["messages"][2]["content"]["type"] == "resource"
+    )
+    resource = response.response_data["result"]["messages"][2]["content"]["resource"]
     assert "text" in resource
     assert '"example": "data"' in resource["text"]
     assert resource["mimeType"] == "application/json"
@@ -444,27 +479,35 @@ def test_prompt_with_file_objects():
     response = serializer.process_request(request)
 
     assert response is not None
-    assert "result" in response
-    assert "messages" in response["result"]
-    assert len(response["result"]["messages"]) == 3
+    assert "result" in response.response_data
+    assert "messages" in response.response_data["result"]
+    assert len(response.response_data["result"]["messages"]) == 3
 
     # First message - text
-    assert response["result"]["messages"][0]["role"] == "user"
-    assert "Topic: Testing" in response["result"]["messages"][0]["content"]["text"]
+    assert response.response_data["result"]["messages"][0]["role"] == "user"
+    assert (
+        "Topic: Testing"
+        in response.response_data["result"]["messages"][0]["content"]["text"]
+    )
 
     # Second message - file content via add_file_message (file object)
-    assert response["result"]["messages"][1]["role"] == "user"
-    assert response["result"]["messages"][1]["content"]["type"] == "text"
+    assert response.response_data["result"]["messages"][1]["role"] == "user"
+    assert response.response_data["result"]["messages"][1]["content"]["type"] == "text"
     assert (
         "sample instruction from a text file"
-        in response["result"]["messages"][1]["content"]["text"]
+        in response.response_data["result"]["messages"][1]["content"]["text"]
     )
-    assert response["result"]["messages"][1]["content"]["mimeType"] == "text/plain"
+    assert (
+        response.response_data["result"]["messages"][1]["content"]["mimeType"]
+        == "text/plain"
+    )
 
     # Third message - embedded resource via add_file_resource (file object)
-    assert response["result"]["messages"][2]["role"] == "assistant"
-    assert response["result"]["messages"][2]["content"]["type"] == "resource"
-    resource = response["result"]["messages"][2]["content"]["resource"]
+    assert response.response_data["result"]["messages"][2]["role"] == "assistant"
+    assert (
+        response.response_data["result"]["messages"][2]["content"]["type"] == "resource"
+    )
+    resource = response.response_data["result"]["messages"][2]["content"]["resource"]
     assert "text" in resource
     assert '"example": "data"' in resource["text"]
     assert resource["mimeType"] == "application/json"
@@ -482,12 +525,13 @@ def test_batch_request():
         },
     ]
 
-    responses = serializer.process_request(batch_request)
+    response_context = serializer.process_request(batch_request)
 
-    assert responses is not None
-    assert isinstance(responses, list)
-    assert len(responses) == 2
-    assert all("result" in resp for resp in responses)
+    assert response_context is not None
+    assert isinstance(response_context.response_data, list)
+    assert len(response_context.response_data) == 2
+    assert len(response_context.history) == 2
+    assert all("result" in resp for resp in response_context.response_data)
 
 
 def test_cleanup():

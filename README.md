@@ -58,7 +58,7 @@ The mime type will be taken from the `mime_type` parameter or will be automatica
 #### For complex cases, register a resource using a function that returns a `ResourceResult` object. Functions with parameters create resource templates with URI placeholders.
 
 ```python
-from mcp_serializer.features.resource.result import ResourceResult
+from mcp_serializer.results import ResourceResult
 
 @registry.resource(uri="resource/weather/")
 def get_weather(city: str):
@@ -142,7 +142,7 @@ The Pydantic model will be automatically converted to an output schema in the to
 #### For complex responses with multiple content types, return a `ToolsResult` object.
 
 ```python
-from mcp_serializer.features.tool.result import ToolsResult
+from mcp_serializer.results import ToolsResult
 
 @registry.tool()
 def get_weather_forecast(city: str, days: int = 3) -> ToolsResult:
@@ -205,7 +205,7 @@ The file can be a file path or a file object. You can supply title and descripti
 #### A function can be registered to create a prompt. It can return a string, a tuple (text, role), or a `PromptsResult` object.
 
 ```python
-from mcp_serializer.features.prompt.result import PromptsResult
+from mcp_serializer.results import PromptsResult
 
 @registry.prompt()
 def greeting_prompt(name: str):
@@ -274,10 +274,10 @@ The `page_size` is the number of items to return in a single page for listing fe
 
 ### Processing Requests
 
-The `process_request` method takes a JSON-RPC request and returns a JSON-RPC response object. It also handles error responses and batch requests.
+The `process_request` method takes a JSON-RPC request and returns a `ResponseContext` object. The `ResponseContext` provides access to the response data and maintains a history of all request-response interactions.
 
 ```python
-response = serializer.process_request(
+response_context = serializer.process_request(
     request_data={
         "jsonrpc": "2.0",
         "id": 1,
@@ -288,9 +288,42 @@ response = serializer.process_request(
         },
     }
 )
+
+# Access the response data as a dictionary (ready to send to client)
+response_dict = response_context.response_data
+
+# Access detailed information through history
+for entry in response_context.history:
+    # Each entry contains:
+    # - entry.response: Pydantic response object (JsonRpcSuccessResponse/JsonRpcErrorResponse)
+    # - entry.request: Pydantic request object (JsonRpcRequest)
+    # - entry.data: Response as dictionary
+    # - entry.is_error: Boolean indicating if this is an error
+    # - entry.is_notification: Boolean indicating if this is a notification
+    
+    if entry.is_error:
+        print("Error:", entry.data["error"])
+    elif entry.is_notification:
+        print("Notification - no response to send")
+    else:
+        print("Success:", entry.data["result"])
 ```
 
 The `request_data` parameter can be a dict or a JSON string.
+
+**ResponseContext Properties:**
+- `response_data`: The response as a dictionary or list of dictionaries (for batch requests), ready to be serialized to JSON and sent to the client
+- `history`: List of `ResponseEntry` objects, one per request processed
+
+**ResponseEntry Properties (accessible via `response_context.history[i]`):**
+- `response`: The Pydantic BaseModel response object (`JsonRpcSuccessResponse`, `JsonRpcErrorResponse`, or `None` for notifications)
+  - `JsonRpcSuccessResponse` properties: `jsonrpc`, `id`, `result`
+  - `JsonRpcErrorResponse` properties: `jsonrpc`, `id`, `error`
+- `request`: The Pydantic BaseModel request object (`JsonRpcRequest`)
+  - `JsonRpcRequest` properties: `jsonrpc`, `id`, `method`, `params`
+- `data`: The response as a dictionary (same as the corresponding item in `response_data`)
+- `is_error`: Boolean property indicating if this is an error response
+- `is_notification`: Boolean property indicating if this was a notification (no response needed)
 
 <br>
 
@@ -487,6 +520,7 @@ The following examples demonstrate the complete request-response cycle using the
     "jsonrpc": "2.0",
     "id": 3,
     "result": {
+        "content": [],
         "structuredContent": {
             "condition": "sunny",
             "humidity": 65.0,

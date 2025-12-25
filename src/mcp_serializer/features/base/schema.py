@@ -12,28 +12,237 @@ import json
 def cast_python_type(value, python_type):
     """
     Cast a value to the specified Python type.
-    
+
     Args:
         value: The value to cast
         python_type: The target Python type
-        
+
     Returns:
         The value cast to the specified type
     """
+    # Handle None type
+    if python_type is None or python_type is type(None):
+        return None
+
+    # If already the correct type, return as-is
     if type(value) == python_type:
         return value
 
-    if type(value) is str and value.lower() == "null":
-        return None
+    # Get origin and args for generic types
+    origin = get_origin(python_type)
+    args = get_args(python_type)
+
+    # Handle Union/Optional types
+    if origin is Union:
+        non_none_args = [arg for arg in args if arg is not type(None)]
+        if len(non_none_args) == 1:
+            # Optional[X] - cast to X if not None
+            if value is None:
+                return None
+            return cast_python_type(value, non_none_args[0])
+        else:
+            # Union of multiple types - try to match the input type first, then try each
+            input_type = type(value)
+            for arg in non_none_args:
+                if arg == input_type or (
+                    isinstance(arg, type) and isinstance(value, arg)
+                ):
+                    try:
+                        return cast_python_type(value, arg)
+                    except (ValueError, TypeError):
+                        continue
+            # If no type match, try each one
+            for arg in non_none_args:
+                try:
+                    return cast_python_type(value, arg)
+                except (ValueError, TypeError):
+                    continue
+            raise ValueError(f"Cannot cast {value} to {python_type}")
+
+    # Handle List[X], list[X]
+    if origin in (list,) or (
+        hasattr(typing, "List") and origin is getattr(typing, "List", None)
+    ):
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                # If not valid JSON, treat as single item
+                pass
+        if isinstance(value, list):
+            item_type = args[0] if args else Any
+            return [cast_python_type(item, item_type) for item in value]
+        else:
+            # Single item to list
+            item_type = args[0] if args else Any
+            return [cast_python_type(value, item_type)]
+
+    # Handle Dict[K, V], dict[K, V]
+    if origin in (dict,) or (
+        hasattr(typing, "Dict") and origin is getattr(typing, "Dict", None)
+    ):
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                raise ValueError(f"Cannot parse {value} as JSON dict")
+        if isinstance(value, dict):
+            key_type = args[0] if len(args) > 0 else Any
+            val_type = args[1] if len(args) > 1 else Any
+            return {
+                cast_python_type(k, key_type): cast_python_type(v, val_type)
+                for k, v in value.items()
+            }
+        else:
+            raise ValueError(f"Cannot cast {value} to dict")
+
+    # Handle Set[X], set[X], FrozenSet[X]
+    if (
+        origin in (set, frozenset)
+        or origin is getattr(typing, "Set", None)
+        or origin is getattr(typing, "FrozenSet", None)
+    ):
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                raise ValueError(f"Cannot parse {value} as JSON array")
+        if isinstance(value, (list, tuple)):
+            item_type = args[0] if args else Any
+            items = [cast_python_type(item, item_type) for item in value]
+            return (
+                set(items)
+                if origin in (set, getattr(typing, "Set", None))
+                else frozenset(items)
+            )
+        else:
+            # Single item to set
+            item_type = args[0] if args else Any
+            return {cast_python_type(value, item_type)}
+
+    # Handle Tuple[X, Y, ...]
+    if origin in (tuple,) or origin is getattr(typing, "Tuple", None):
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                raise ValueError(f"Cannot parse {value} as JSON array")
+        if isinstance(value, (list, tuple)):
+            if args:
+                # Check if it's Tuple[X, ...] (variable length)
+                if len(args) == 2 and args[1] is Ellipsis:
+                    item_type = args[0]
+                    return tuple(cast_python_type(item, item_type) for item in value)
+                else:
+                    # Fixed length tuple
+                    if len(value) != len(args):
+                        raise ValueError(
+                            f"Tuple length mismatch: expected {len(args)}, got {len(value)}"
+                        )
+                    return tuple(
+                        cast_python_type(item, arg) for item, arg in zip(value, args)
+                    )
+            else:
+                return tuple(value)
+        else:
+            raise ValueError(f"Cannot cast {value} to tuple")
+
+    # Handle basic Python types
+    if python_type is str:
+        return str(value)
+    if python_type is int:
+        return int(value)
+    if python_type is float:
+        return float(value)
     if python_type is bool:
-        if value.lower() in ("true", "1", "yes", "on"):
-            return True
-        elif value.lower() in ("false", "0", "no", "off"):
-            return False
+        if isinstance(value, str):
+            if value.lower() in ("true", "1", "yes", "on"):
+                return True
+            elif value.lower() in ("false", "0", "no", "off"):
+                return False
         return bool(value)
-    if python_type in (list, dict) and isinstance(value, str):
-        return json.loads(value)
-    return python_type(value)
+
+    # Handle tuple, set, frozenset without type params
+    if python_type in (tuple, set, frozenset):
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                raise ValueError(f"Cannot parse {value} as JSON array")
+        if isinstance(value, (list, tuple)):
+            return python_type(value)
+        else:
+            return python_type([value])
+
+    # Handle bytes as base64 string
+    if python_type in (bytes, bytearray):
+        if isinstance(value, str):
+            import base64
+
+            return python_type(base64.b64decode(value))
+        return python_type(value)
+
+    # Handle numeric types
+    if python_type is Decimal:
+        return Decimal(str(value))
+    if python_type is complex:
+        return complex(value)
+
+    # Handle date/time types
+    if python_type is datetime:
+        if isinstance(value, str):
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        raise ValueError(f"Cannot cast {value} to datetime")
+    if python_type is date:
+        if isinstance(value, str):
+            return date.fromisoformat(value)
+        raise ValueError(f"Cannot cast {value} to date")
+    if python_type is time:
+        if isinstance(value, str):
+            return time.fromisoformat(value)
+        raise ValueError(f"Cannot cast {value} to time")
+    if python_type is timedelta:
+        # For simplicity, assume seconds as float/int
+        if isinstance(value, (int, float)):
+            return timedelta(seconds=value)
+        raise ValueError(f"Cannot cast {value} to timedelta")
+
+    # Handle UUID
+    if python_type is UUID:
+        return UUID(value)
+
+    # Handle Path
+    if python_type is Path or (
+        isinstance(python_type, type) and issubclass(python_type, Path)
+    ):
+        return python_type(value)
+
+    # Handle Enum types
+    if isinstance(python_type, type) and issubclass(python_type, Enum):
+        return python_type(value)
+
+    # Handle Pydantic BaseModel
+    if isinstance(python_type, type) and issubclass(python_type, BaseModel):
+        if isinstance(value, dict):
+            return python_type(**value)
+        raise ValueError(f"Cannot cast {value} to {python_type}")
+
+    # Handle any other class type - try constructor
+    if isinstance(python_type, type):
+        try:
+            return python_type(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"Cannot cast {value} to {python_type}")
+
+    # Handle string type hints (forward references) - treat as object
+    if isinstance(python_type, str):
+        return value
+
+    # Default: try direct conversion
+    try:
+        return python_type(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"Cannot cast {value} to {python_type}")
 
 
 class JsonSchema(BaseModel):

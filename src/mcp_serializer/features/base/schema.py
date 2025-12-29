@@ -362,8 +362,8 @@ class JsonSchema(BaseModel):
                 if len(args) == 2 and args[1] is Ellipsis:
                     schema["items"] = self._python_type_to_json_schema(args[0])
                 else:
-                    # Fixed length tuple with prefixItems
-                    schema["prefixItems"] = [
+                    # Fixed length tuple with items
+                    schema["items"] = [
                         self._python_type_to_json_schema(arg) for arg in args
                     ]
                     schema["minItems"] = len(args)
